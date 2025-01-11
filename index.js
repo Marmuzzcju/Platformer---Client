@@ -87,6 +87,11 @@ function handle_server_message(data){
             map.blocks = mapData.blocks;
             map.height = mapData.height;
             map.width = mapData.width;
+            
+            //this is called once as the user connects so tell the server your name now
+            let name = document.querySelector('#input-nickname').value ?? 'Player';
+            send_message('My_name', name);
+
             createMapHitboxes();
             break;
         }
@@ -113,8 +118,9 @@ function handle_server_message(data){
 
 function sendUpdatedInput(){
     let action = 'Player_input';
-    let data = JSON.stringify(player.input);
-    send_message(action, data);
+    let input = JSON.stringify(player.input),
+        position = JSON.stringify(player.data.position);
+    send_message(action, `${input}${seperator_key}${position}`);
 }
 
 page_config();
@@ -152,6 +158,12 @@ let mobileControl = {
         y: 0,
     }
 }
+
+//sprites
+const img = {
+    player: new Image(),
+};
+img.player.src = 'imgs/Player1_Standing.png';
 
 //animation data
 const animationData = {
@@ -590,9 +602,17 @@ function drawMap(){
 }
 //draw players, mobs etc.
 function drawPlayers(){
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = 'rgba(255,0,0,0.5)';
     characters.players.forEach(p => {
-        ctx.fillRect(relTC.x(p.position.x),relTC.y(p.position.y),UNIT_WIDTH,UNIT_WIDTH);
+        let x = relTC.x(p.position.x), y = relTC.y(p.position.y), w = UNIT_WIDTH;
+        ctx.drawImage(img.player,x,y,w,w);
+        ctx.fillRect(x,y,w,w);
+        /*ctx.font = `bold ${UNIT_WIDTH}px Verdana`;
+        ctx.fillText(
+          p.name,
+          x,
+          y - UNIT_WIDTH * .7
+        );*/
     });
 
     /*ctx.fillStyle = 'lime';
