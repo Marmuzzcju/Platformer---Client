@@ -1,0 +1,64 @@
+button {
+    cursor: pointer;
+}
+
+input[type='text'] {
+    cursor: text;
+}
+
+#game-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+}
+
+#menu {
+    display: none;
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    border: 2px solid red;
+    color: #cacaca;
+}
+#menu > div {
+    background-color: rgba(60,60,60,0.3);
+    border: 2px solid gray;
+    padding: 1px;
+    margin-bottom: 2px;
+}
+#menu > div > input[type='number'],
+#menu > div > input[type='text'] {
+    background-color: rgba(50,50,50,.5);
+    border: none;
+    color: #cacaca;
+}
+
+#realLerp {width: 60px;}
+#input-arificial-framerate {width: 40px;}
+
+#start-menu {
+    position: fixed;
+    width: 400px;
+    height: 200px;
+    top: calc(50% - 100px);
+    left: calc(50% - 200px);
+    border: 1px solid grey;
+    border-radius: 3px;
+    background-color: aquamarine;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+}
+
+#start-menu > * {
+    width: 200px;
+    font-size: large;
+}
+
+/*
+#input-server-id {
+    top: calc(40% - 60px);
+    left: calc(50% - 75px);
+    width: 150px;
+}*/

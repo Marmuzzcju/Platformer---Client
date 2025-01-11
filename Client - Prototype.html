@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="index.css">
+    <title>Platformer: Client - Prototype</title>
+</head>
+<body>
+    <canvas id="game-canvas">This is the game canvas.</canvas>
+    <div id="menu">
+        <div id="menu-lerp-container">
+            Lerp: &nbsp;&nbsp;<input type="number" min="0" max="1" step=".01" value="0.5" id="input-lerp" onchange="updateLerp(this.value**9);"></br>
+            <input type="range" min="0" max="1" step=".01" value=".5" id="slide-lerp" oninput="updateLerp(this.value**9);"></br>
+            [Real Lerp: <input type="text" value="0.001953" id="realLerp" oninput="updateLerp(this.value);">]
+        </div>
+        <div id="menu-artificial-framerate-container">
+            Artificial Framarate: <input type="checkbox" onchange="AGM.forceFramerate=this.checked"></br>
+            Framerate: <input type="number" min="1" value="60" oninput="AGM.framerate=this.value" id="input-arificial-framerate">
+        </div>
+        <div id="menu-show-hitboxes-container">
+            Show hitbox-flow: <input type="checkbox" onchange="debuging.showHitboxFlows=this.checked"></br>
+            Show screen segments: <input type="checkbox" onchange="debuging.showScreenSplit=this.checked" checked></br>
+            Show input control: <input type="checkbox" onchange="debuging.showInputControl=this.checked" checked></br>
+        </div>
+    </div>
+    <div id="start-menu">
+        <input type="text" id="input-nickname" placeholder="Enter Nickname"></br>
+        <input type="text" id="input-server-id" placeholder="Enter Server Id"></br>
+        <button onclick="connect_server();" id="btn-start-game">Connect to Server</button>
+    </div>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script src="Client - Prototype.js"></script>
+    <script src="Client - event-listener.js"></script>
+</body>
+</html>
