@@ -8,9 +8,10 @@
 </head>
 <body>
     <canvas id="game-canvas">This is the game canvas.</canvas>
+    <div id="show-menu" class="semi-button" onclick="fadeMenu(0);">=</div>
     <div id="menu">
         <div id="menu-lerp-container">
-            Lerp: &nbsp;&nbsp;<input type="number" min="0" max="1" step=".01" value="0.5" id="input-lerp" onchange="updateLerp(this.value**9);"></br>
+            Lerp: &nbsp;&nbsp;<input type="number" min="0" max="1" step=".01" value="0.5" id="input-lerp" onchange="updateLerp(this.value**9);"><span class="close semi-button" onclick="fadeMenu(1);">X</span></br>
             <input type="range" min="0" max="1" step=".01" value=".5" id="slide-lerp" oninput="updateLerp(this.value**9);"></br>
             [Real Lerp: <input type="text" value="0.001953" id="realLerp" oninput="updateLerp(this.value);">]
         </div>
@@ -21,7 +22,7 @@
         <div id="menu-show-hitboxes-container">
             Show hitbox-flow: <input type="checkbox" onchange="debuging.showHitboxFlows=this.checked"></br>
             Show screen segments: <input type="checkbox" onchange="debuging.showScreenSplit=this.checked" checked></br>
-            Show input control: <input type="checkbox" onchange="debuging.showInputControl=this.checked" checked></br>
+            Show input control: <input type="checkbox" onchange="debuging.showInputControl=this.checked"></br>
         </div>
     </div>
     <div id="start-menu">

@@ -216,7 +216,7 @@ const hitboxes = {
 const debuging = {
     showHitboxFlows: false,
     showScreenSplit: true,
-    showInputControl: true,
+    showInputControl: false,
 }
 
 function createMapHitboxes(){
@@ -672,19 +672,6 @@ function drawDebug(){
         ctx.fillStyle = player.data.isStomping ? 'green' : 'red';
         ctx.fillRect(300,100,50,50);
     }
-    ctx.fillStyle = 'red';
-    switch(true){
-        case debuging.showHitboxFlows:{
-            ctx.fillRect(10,150,10,10);
-        }
-        case debuging.showScreenSplit:{
-            ctx.fillRect(10,170,10,10);
-        }
-        case debuging.showInputControl:{
-            ctx.fillRect(10,190,10,10);
-            return true;
-        }
-    }
 }
 
 //--Game Loop End--
@@ -732,4 +719,17 @@ function startGame(){
     resizeGameDisplay();
     gameIsRunning=true;
     gameLoop();
+}
+
+
+// -- UI functions --
+
+function fadeMenu(fade, step){
+    if(fade){
+        document.querySelector('#menu').style.transform = 'scale(0)';
+        document.querySelector('#show-menu').style.opacity = 1;
+    } else {
+        document.querySelector('#menu').style.transform = 'scale(1)';
+        document.querySelector('#show-menu').style.opacity = 0;
+    }
 }

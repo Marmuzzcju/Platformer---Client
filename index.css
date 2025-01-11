@@ -1,3 +1,7 @@
+:root {
+    --backgroundGrey: rgba(50,50,50,0.5);
+}
+
 button {
     cursor: pointer;
 }
@@ -17,8 +21,9 @@ input[type='text'] {
     position: fixed;
     top: 20px;
     left: 20px;
-    border: 2px solid red;
     color: #cacaca;
+    transition: transform .4s;
+    transform-origin: top left;
 }
 #menu > div {
     background-color: rgba(60,60,60,0.3);
@@ -28,10 +33,32 @@ input[type='text'] {
 }
 #menu > div > input[type='number'],
 #menu > div > input[type='text'] {
-    background-color: rgba(50,50,50,.5);
+    background-color: var(--backgroundGrey);
     border: none;
     color: #cacaca;
 }
+#menu .close {
+    margin-left: 31px;
+    color: rgb(255, 100, 100);
+}
+#show-menu {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    color: rgb(120, 255, 120);
+    opacity: 0;
+    transition: opacity .4s;
+}
+.semi-button {
+    background-color: var(--backgroundGrey);
+    border: 1px solid black;
+    border-radius: 2px;
+    font-family: cursive;
+    font-weight: bold;
+    padding: 0px 4px;
+    cursor: pointer;
+}
+
 
 #realLerp {width: 60px;}
 #input-arificial-framerate {width: 40px;}
