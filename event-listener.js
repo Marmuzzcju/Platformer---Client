@@ -77,19 +77,31 @@ let touchEvents = {
 }
 document.addEventListener('touchstart', e => {
     console.log(e);
-    touchEvents.right.origin.x = e.touches[0].pageX;
-    touchEvents.right.origin.y = e.touches[0].pageY;
-    //touchEvents.right.hasStarted = true;
+    mobileControl.origin.x = e.touches[0].pageX;
+    mobileControl.origin.y = e.touches[0].pageY;
+    mobileControl.current.x = e.touches[0].pageX;
+    mobileControl.current.y = e.touches[0].pageY;
+    mobileControl.isMoving = true;
 });
 document.addEventListener('touchmove', e => {
     let oldInput = JSON.stringify(player.input);
     //console.log(e);
-    let deltaX = e.touches[0].pageX - touchEvents.right.origin.x,  // >0: right; <0: left
-        deltaY = e.touches[0].pageY - touchEvents.right.origin.y;  // >0: down; <0: up
-    player.input.mleft = deltaX < -10;
-    player.input.mright = deltaX > 10;
-    player.input.jump = deltaY < -10;
-    player.input.stomp = deltaY > 10;
+    mobileControl.current.x = e.touches[0].pageX;
+    mobileControl.current.y = e.touches[0].pageY;
+    let deltaX = e.touches[0].pageX - mobileControl.origin.x,  // >0: right; <0: left
+        deltaY = e.touches[0].pageY - mobileControl.origin.y,  // >0: down; <0: up
+        distance = (deltaX**2+deltaY**2)**.5;
+    if(distance > 50){
+        //move origin
+        let VectorOC = [mobileControl.current.x-mobileControl.origin.x,mobileControl.current.y-mobileControl.origin.y],
+            partian = (distance - 50) / distance;
+        mobileControl.origin.x += VectorOC[0] * partian;
+        mobileControl.origin.y += VectorOC[1] * partian;
+    }
+    player.input.mleft = deltaX < -20;
+    player.input.mright = deltaX > 20;
+    player.input.jump = deltaY < -20;
+    player.input.stomp = deltaY > 20;
     console.log(`Delty X: ${deltaX}; - Y: ${deltaY}`);
     if(JSON.stringify(player.input) != oldInput) sendUpdatedInput();
 });
@@ -100,6 +112,7 @@ document.addEventListener('touchend', e => {
     player.input.stomp = false;
     player.input.mleft = false;
     player.input.mright = false;
+    mobileControl.isMoving = false;
     if(JSON.stringify(player.input) != oldInput) sendUpdatedInput();
 });
 document.addEventListener('touchcancel', e => {
@@ -109,5 +122,6 @@ document.addEventListener('touchcancel', e => {
     player.input.stomp = false;
     player.input.mleft = false;
     player.input.mright = false;
+    mobileControl.isMoving = false;
     if(JSON.stringify(player.input) != oldInput) sendUpdatedInput();
 });

@@ -140,7 +140,17 @@ let player = {
         mleft:false,
         mright:false,
     },
-
+};
+let mobileControl = {
+    isMoving: false,
+    origin: {
+        x: 0,
+        y: 0,
+    },
+    current: {
+        x: 0,
+        y: 0,
+    }
 }
 
 //animation data
@@ -602,6 +612,20 @@ function drawAnimations(){
     ctx.fillRect(canvas.width/2-150,canvas.height-140,300*pH/100,20);
     if(animationData.lastPlayerHealth!=pH) animationData.lastDamageTick += frameDelta;
     if(animationData.lastDamageTick>=1) animationData.lastPlayerHealth = pH;
+
+    //mobile joystick
+    if(mobileControl.isMoving){
+        let o = mobileControl.origin,
+            c = mobileControl.current;
+        ctx.fillStyle = 'rgba(110,110,110,.7)';
+        ctx.strokeStyle = 'rgba(110,110,110,.7)';
+        ctx.beginPath();
+        ctx.arc(c.x,c.y,20,0,2*Math.PI);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(o.x,o.y,50,0,2*Math.PI);
+        ctx.stroke();
+    }
 }
 
 //draw debugging stuff such as middle cross
