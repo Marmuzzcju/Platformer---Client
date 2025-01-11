@@ -56,6 +56,10 @@ input[type='text'] {
     font-size: large;
 }
 
+#start-menu .small {
+    width: 150px;
+    font-size: medium;
+}
 /*
 #input-server-id {
     top: calc(40% - 60px);
