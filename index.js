@@ -612,7 +612,7 @@ function drawPlayers(){
           p.name,
           x,
           y - UNIT_WIDTH * .7
-        );*/
+        ); */
     });
 
     /*ctx.fillStyle = 'lime';
