@@ -35,7 +35,8 @@ function connect_server(provided_server_id){
           handle_server_message(data);
         });
         // Send messages
-        conn.send('Hello!');
+        let username = document.querySelector('#input-nickname').value;
+        conn.send(`Hello${seperator_key}${username}`);
         data.connection = conn;
         //start client game
         startGame();
@@ -88,9 +89,9 @@ function handle_server_message(data){
             map.height = mapData.height;
             map.width = mapData.width;
             
-            //this is called once as the user connects so tell the server your name now
+            /*//this is called once as the user connects so tell the server your name now
             let name = document.querySelector('#input-nickname').value ?? 'Player';
-            send_message('My_name', name);
+            send_message('My_name', name);*/
 
             createMapHitboxes();
             break;
@@ -105,6 +106,7 @@ function handle_server_message(data){
                         cp.position = p.position;
                         cp.velocity = p.velocity;
                         cp.input = p.input;
+                        cp.name = p.name;
                     }
                 })
             } else {
@@ -602,17 +604,31 @@ function drawMap(){
 }
 //draw players, mobs etc.
 function drawPlayers(){
-    ctx.fillStyle = 'rgba(255,0,0,0.5)';
-    characters.players.forEach(p => {
+    ctx.textAlign = 'center';
+    characters.players.forEach((p,c) => {
+        ctx.fillStyle = 'rgba(255,0,0,0.3)';
         let x = relTC.x(p.position.x), y = relTC.y(p.position.y), w = UNIT_WIDTH;
         ctx.drawImage(img.player,x,y,w,w);
         ctx.fillRect(x,y,w,w);
-        /*ctx.font = `bold ${UNIT_WIDTH}px Verdana`;
-        ctx.fillText(
-          p.name,
-          x,
-          y - UNIT_WIDTH * .7
-        ); */
+        if(c){
+            ctx.fillStyle = 'white';
+            ctx.font = `${w/3}px Verdana`;
+            ctx.fillText(
+            p.name,
+            x + w / 2,
+            y - w / 2
+            );
+            //healthbar
+            //let pH = p.health;
+            ctx.strokeStyle = 'grey';
+            ctx.strokeRect(x-w*.2,y-w*.3,w*1.4,w*.2);
+            /*ctx.fillStyle = `rgba(${100+1.5*pH},${1.5*pH},0,${1-animationData.lastDamageTick})`;
+            ctx.fillRect(canvas.width/2-150,canvas.height-140,300*animationData.lastPlayerHealth/100,20);*/
+            ctx.fillStyle = 'green';//`rgb(${150*(80-pH)},${3*pH},0)`;
+            ctx.fillRect(x-w*.2,y-w*.3,w*p.health*0.014,w*.2);
+            /*if(animationData.lastPlayerHealth!=pH) animationData.lastDamageTick += frameDelta;
+            if(animationData.lastDamageTick>=1) animationData.lastPlayerHealth = pH;*/
+        }
     });
 
     /*ctx.fillStyle = 'lime';
@@ -625,11 +641,11 @@ function drawAnimations(){
     //player health
     let pH = player.data.health;
     ctx.strokeStyle = 'grey';
-    ctx.strokeRect(canvas.width/2-151,canvas.height-141,302,22);
+    ctx.strokeRect(canvas.width/2-151,canvas.height-71,302,22);
     ctx.fillStyle = `rgba(${100+1.5*pH},${1.5*pH},0,${1-animationData.lastDamageTick})`;
-    ctx.fillRect(canvas.width/2-150,canvas.height-140,300*animationData.lastPlayerHealth/100,20);
+    ctx.fillRect(canvas.width/2-150,canvas.height-70,300*animationData.lastPlayerHealth/100,20);
     ctx.fillStyle = `rgb(${150*(80-pH)},${3*pH},0)`;
-    ctx.fillRect(canvas.width/2-150,canvas.height-140,300*pH/100,20);
+    ctx.fillRect(canvas.width/2-150,canvas.height-70,300*pH/100,20);
     if(animationData.lastPlayerHealth!=pH) animationData.lastDamageTick += frameDelta;
     if(animationData.lastDamageTick>=1) animationData.lastPlayerHealth = pH;
 
