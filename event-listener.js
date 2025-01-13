@@ -1,6 +1,9 @@
-//hello
-document.addEventListener('keydown', e => {
+//canvas cannot catch keydown events so just wrap that thing inside a button :p
+const canvasEventListener = document.querySelector('#game-canvas-event-listener'),
+    chat_input = document.querySelector('#chat-input');
+canvasEventListener.addEventListener('keydown', e => {
     let oldInput = JSON.stringify(player.input);
+    //console.log(e);
     switch(e.keyCode){
         case keybinds.jump:{
             player.input.jump = true;
@@ -18,6 +21,10 @@ document.addEventListener('keydown', e => {
             player.input.mright = true;
             break;
         }
+        case keybinds.openChat:{
+            chat_input.focus();
+            break;
+        }
         default:{
             console.log(e.keyCode);
             inputUpdated = false;
@@ -26,7 +33,7 @@ document.addEventListener('keydown', e => {
     }
     if(JSON.stringify(player.input) != oldInput) sendUpdatedInput();
 });
-document.addEventListener('keyup', e => {
+canvasEventListener.addEventListener('keyup', e => {
     let oldInput = JSON.stringify(player.input);
     switch(e.keyCode){
         case keybinds.jump:{
@@ -52,6 +59,18 @@ document.addEventListener('keyup', e => {
     }
     if(JSON.stringify(player.input) != oldInput) sendUpdatedInput();
 });
+chat_input.addEventListener('keydown', e => {
+    if(e.keyCode == keybinds.openChat){
+        canvasEventListener.focus();
+        let message = chat_input.value;
+        if(message.length){
+            //send message
+            pushChatMessage('You', message);
+            send_message('Chat', message);
+            chat_input.value = '';
+        }
+    }
+})
 
 window.addEventListener("resize", (e) => {resizeGameDisplay();});
 
@@ -75,7 +94,7 @@ let touchEvents = {
         hasStarted: false,
     }
 }
-document.addEventListener('touchstart', e => {
+canvas.addEventListener('touchstart', e => {
     console.log(e);
     mobileControl.origin.x = e.touches[0].pageX;
     mobileControl.origin.y = e.touches[0].pageY;
@@ -83,7 +102,7 @@ document.addEventListener('touchstart', e => {
     mobileControl.current.y = e.touches[0].pageY;
     mobileControl.isMoving = true;
 });
-document.addEventListener('touchmove', e => {
+canvas.addEventListener('touchmove', e => {
     let oldInput = JSON.stringify(player.input);
     //console.log(e);
     mobileControl.current.x = e.touches[0].pageX;
@@ -105,7 +124,7 @@ document.addEventListener('touchmove', e => {
     console.log(`Delty X: ${deltaX}; - Y: ${deltaY}`);
     if(JSON.stringify(player.input) != oldInput) sendUpdatedInput();
 });
-document.addEventListener('touchend', e => {
+canvas.addEventListener('touchend', e => {
     let oldInput = JSON.stringify(player.input);
     console.log(e);
     player.input.jump = false;
@@ -115,7 +134,7 @@ document.addEventListener('touchend', e => {
     mobileControl.isMoving = false;
     if(JSON.stringify(player.input) != oldInput) sendUpdatedInput();
 });
-document.addEventListener('touchcancel', e => {
+canvas.addEventListener('touchcancel', e => {
     let oldInput = JSON.stringify(player.input);
     console.log(e);
     player.input.jump = false;

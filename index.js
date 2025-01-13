@@ -115,6 +115,13 @@ function handle_server_message(data){
           })
           break;
         }
+        case 'Chat':{
+            //push new chat message
+            let dm = data.split(seperator_key),
+                author = dm[1],
+                message = dm[2];
+            pushChatMessage(author, message);
+        }
     }
 }
 
@@ -132,6 +139,7 @@ const keybinds = {
     stomp: 83,
     moveLeft: 65,
     moveRight: 68,
+    openChat: 13,
 }
 
 let playerId = 0, idTable = {};
@@ -160,6 +168,8 @@ let mobileControl = {
         y: 0,
     }
 }
+
+const chat_history = document.querySelector('#chat-history');
 
 //sprites
 const img = {
@@ -711,6 +721,10 @@ function drawDebug(){
 }
 
 //--Game Loop End--
+
+function pushChatMessage(author, message){
+    chat_history.innerHTML = `<div class="message"><span class="bold"><span class="author">${author}</span>: </span>${message}</div>` + chat_history.innerHTML;
+}
 
 function createCharacter(type, values){
     //returning optional index on where the new character has been pushed to the corresponding array
