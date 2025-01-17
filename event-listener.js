@@ -59,6 +59,20 @@ canvasEventListener.addEventListener('keyup', e => {
     }
     if(JSON.stringify(player.input) != oldInput) sendUpdatedInput();
 });
+canvasEventListener.addEventListener('click', e => {
+    console.log(e);
+    switch(e.button){
+        case 0:{
+            //attack
+            let delta = [e.pageX - canvas.width / 2, e.pageY - canvas.height / 2],
+                length = (delta[0]**2+delta[1]**2)**.5,
+                normalFactor = 1 / length,
+                normal_attack_vector = [delta[0]*normalFactor, delta[1]*normalFactor];
+            handle_player_attack(normal_attack_vector);
+            break;
+        }
+    }
+});
 chat_input.addEventListener('keydown', e => {
     if(e.keyCode == keybinds.openChat){
         canvasEventListener.focus();

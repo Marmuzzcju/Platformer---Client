@@ -5,6 +5,7 @@ const ctx = canvas.getContext('2d');
 const seperator_key = ';\$/;';
 
 const data = {
+    id: 0,
     peer: {},
     connection: {},
 }
@@ -13,6 +14,7 @@ function open_peer(){
     let peer = new Peer();
     peer.on('open', function(id) {
         console.log('My peer ID is: ' + id);
+        data.id = id;
     });
     data.peer = peer;
 }
@@ -82,6 +84,15 @@ function handle_server_message(data){
             */
             break;
         }
+        case 'User_update':{
+            console.log('Received User update :D')
+            let user = JSON.parse(data.split(seperator_key)[1]);
+            characters.players = [characters.players[0]];
+            user.forEach(u => {
+                characters.players.push(u);
+            });
+            break;
+        }
         case 'Map_data':{
             //reset/update map to send map
             let mapData = JSON.parse(data.split(seperator_key)[1]);
@@ -115,6 +126,24 @@ function handle_server_message(data){
           })
           break;
         }
+        case 'Projectile':{
+            //here
+            projectiles.push(JSON.parse(data.split(seperator_key)[1]));
+            break;
+        }
+        case 'Projectile_hit':{
+            //here
+            let temp = data.split(seperator_key)[1].split(','),
+                projectile = temp[0],
+                player = temp[1];
+            characters.players.forEach(p => {
+                if(p.id == player){
+                    applyDamage(p, 10, 0);
+                }
+            });
+            projectiles.splice(projectile, 1);
+            break;
+        }
         case 'Chat':{
             //push new chat message
             let dm = data.split(seperator_key),
@@ -147,6 +176,7 @@ const characters = {
     players: [],
     //mobs: [{type:'fang',status:'lurk',focusTime:1,target:0,position:{x:8,y:2},sting:{pos:{x:8,y:2},speed:20,damage:10},reach:7}],
 }
+const projectiles = [];
 //store all players inside characters, then store player controlled by user inside player.data for easier access
 let player = {
     data:{},
@@ -175,7 +205,7 @@ const chat_history = document.querySelector('#chat-history');
 const img = {
     player: new Image(),
 };
-img.player.src = 'imgs/Player1_Standing.png';
+img.player.src = 'imgs/Player3_Standing.png';
 
 //animation data
 const animationData = {
@@ -191,6 +221,8 @@ let gameIsRunning = false;
 
 let frameDelta = 0;
 let lastTimestamp = new Date().getTime();
+
+let frame_count = 0;
 
 const map = {
     width: 16,
@@ -403,7 +435,9 @@ function gameLoop(){
     frameDelta = frameDelta > 500 ? 500 : frameDelta;  //prevent big delta when switching tabs - will be improved later
     drawBackground();
     updateCharacters();
+    update_projectiles();
     drawEverything();
+    check_data();//checks whether something is odd/missing etc
     lastTimestamp = timestamp;
 }
 
@@ -493,8 +527,37 @@ function updatePlayers(){
             p.isStomping = false;
         }
         p.coyoteTimer = p.isGrounded ? 0 : p.coyoteTimer+frameDelta;
+
+        //decrement weapon cooldown
+        if(p.weapon.cooldown > 0) p.weapon.cooldown -= frameDelta;
     });
 };
+
+function handle_player_attack(normal_attack_vector){
+    switch(player.data.weapon.type){
+        case 0:{
+            //blowgun
+            if(player.data.weapon.cooldown <= 0){
+                player.data.weapon.cooldown = .7;//cooldown in s; arbitrary for now
+                let s = player.data.weapon.projectile_speed,
+                    p = player.data.position,
+                    new_projectile = {
+                    type: 0,//dart
+                    from: data.id,
+                    position: {
+                        x: p.x + .5,
+                        y: p.y + .5,
+                    },
+                    velocity: [normal_attack_vector[0] * s,
+                        normal_attack_vector[1] * s],
+                };
+                send_message(`Attack${seperator_key}${p.x},${p.y}${seperator_key}${JSON.stringify(normal_attack_vector)}`);
+                projectiles.push(new_projectile);
+            }
+            break;
+        }
+    }
+}
 
 //update mobs position
 function updateMobs(){
@@ -568,6 +631,42 @@ function updateMobs(){
     })
 };
 
+//update projectiles
+function update_projectiles(){
+    let dead_projectiles = [];
+    projectiles.forEach((p,c) => {
+        switch(p.type){
+            case 0:{
+                //dart
+                let old_position = p.position;
+                p.position.x += p.velocity[0] * frameDelta;
+                p.position.y += p.velocity[1] * frameDelta;
+                p.velocity[1] += frameDelta * 40;
+                //check for player/mob collision
+                let alive = true;
+                characters.players.forEach(player => {
+                    if(p.from != player.id){
+                        if(Math.abs(p.position.x-player.position.x)*2 <= 1 && Math.abs(p.position.y-player.position.y)*2 <= 1){
+                            //projectile hits player (note: projectile has no size yet)
+                            //don't do anything rn, server tells you when :)
+                            /*
+                            dead_projectiles.push(c);
+                            alive = false;
+                            applyDamage(player, 10, 0);
+                            */
+                        }
+                    }
+                });
+                if(alive && p.position.y >= map.height) dead_projectiles.push(c);
+                break;
+            }
+        }
+    });
+    dead_projectiles.forEach((i,c) => {
+        projectiles.splice(i-c, 1);
+    });
+}
+
 function applyDamage(target, damage, type){
     //later add damage types & dmg resistance...
     target.health -= damage;
@@ -616,10 +715,10 @@ function drawMap(){
 function drawPlayers(){
     ctx.textAlign = 'center';
     characters.players.forEach((p,c) => {
-        ctx.fillStyle = 'rgba(255,0,0,0.3)';
+        ctx.fillStyle = 'rgba(255,0,0,0.1)';
         let x = relTC.x(p.position.x), y = relTC.y(p.position.y), w = UNIT_WIDTH;
-        ctx.drawImage(img.player,x,y,w,w);
         ctx.fillRect(x,y,w,w);
+        ctx.drawImage(img.player,x,y,w,w);
         if(c){
             ctx.fillStyle = 'white';
             ctx.font = `${w/3}px Verdana`;
@@ -658,6 +757,12 @@ function drawAnimations(){
     ctx.fillRect(canvas.width/2-150,canvas.height-70,300*pH/100,20);
     if(animationData.lastPlayerHealth!=pH) animationData.lastDamageTick += frameDelta;
     if(animationData.lastDamageTick>=1) animationData.lastPlayerHealth = pH;
+
+    //projectiles
+    ctx.fillStyle = 'rgb(150,0,0)';
+    projectiles.forEach(p => {
+        ctx.fillRect(relTC.x(p.position.x)-3,relTC.y(p.position.y)-3,6,6);
+    });
 
     //mobile joystick
     if(mobileControl.isMoving){
@@ -720,6 +825,21 @@ function drawDebug(){
     }
 }
 
+function check_data(){
+    frame_count++;
+    if(!(frame_count%50)){
+        //do every 50th frame
+        characters.players.forEach((p, c) => {
+            if(c){
+                if((p.id + '').length < 10){
+                    //id seems odd; request new id
+                    send_message('Odd_id', '???');
+                }
+            }
+        })
+    }
+}
+
 //--Game Loop End--
 
 function pushChatMessage(author, message){
@@ -743,6 +863,11 @@ function createCharacter(type, values){
                 coyoteTimer: 0,
                 name: values?.name ?? 'Player',
                 id: values?.id ?? playerId,
+                weapon: {
+                    type: values?.type ?? 0,
+                    cooldown: 0,
+                    projectile_speed: 30,
+                },
             };
             idx = characters.players.length;
             idTable[playerId] = idx;
@@ -764,7 +889,7 @@ function startGame(){
     document.querySelector('#start-menu').style.display = 'none';
     document.querySelector('#menu').style.display = 'inline';
     let name = document.querySelector('#input-nickname').value;
-    let idx = createCharacter('player',{name:name});
+    let idx = createCharacter('player',{name:name,id:data.id});
     player.data = characters.players[idx];
     resizeGameDisplay();
     gameIsRunning=true;
