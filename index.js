@@ -832,7 +832,7 @@ function check_data(){
         characters.players.forEach((p, c) => {
             if(c){
                 if((p.id + '').length < 10){
-                    //id seems odd; request new id
+                    //id seems odd - request new id
                     send_message('Odd_id', '???');
                 }
             }
