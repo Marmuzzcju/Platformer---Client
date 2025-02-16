@@ -179,7 +179,9 @@ const characters = {
 const projectiles = [];
 //store all players inside characters, then store player controlled by user inside player.data for easier access
 let player = {
-    data:{},
+    data:{
+        realAimPosition: [0,0],
+    },
     input:{
         jump:false,
         stomp:false,
@@ -204,8 +206,16 @@ const chat_history = document.querySelector('#chat-history');
 //sprites
 const img = {
     player: new Image(),
+    blowpipe: new Image(),
+    dart: new Image(),
+    block: new Image(),
+    tile_set: new Image(),
 };
 img.player.src = 'imgs/Player3_Standing.png';
+img.blowpipe.src = 'imgs/Blasrohr_16x5.png';
+img.dart.src = 'imgs/Projektil_7x3.png';
+img.block.src = 'imgs/Block_all_surrounded.png';
+img.tile_set.src = 'imgs/Tile-set_Blocke_128x128.png';
 
 //animation data
 const animationData = {
@@ -225,41 +235,43 @@ let lastTimestamp = new Date().getTime();
 let frame_count = 0;
 
 const map = {
-    width: 16,
-    height: 9,
+    width: 64,
+    height: 36,
+    cells: [    ],
     blocks: [
-        {x:9,y:8},
-        {x:9,y:7},
-        {x:8,y:8},
-        {x:8,y:7},
+        {x:9,y:0},
+        {x:9,y:1},
+        {x:8,y:0},
+        {x:8,y:1},
         {x:10,y:3},
-        {x:6,y:5},
-        {x:5,y:5},
-        {x:12,y:-1},
-        {x:14,y:-5},
-        {x:11,y:-5},
-        {x:11,y:-8},
-        {x:11,y:-11},
-        {x:11,y:-14},
-        {x:11,y:-17},
-        {x:11,y:-19},
-        {x:13,y:3},
-        {x:17,y:0},
-        {x:18,y:0},
-        {x:18,y:1},
-        {x:18,y:2},
-        {x:18,y:3},
-        {x:17,y:3},
-        {x:-5,y:6},
-        {x:-6,y:6},
-        {x:-7,y:6},
-        {x:-7,y:4},
-        {x:-6,y:4},
-        {x:-6,y:3},
-        {x:-6,y:2},
-        {x:-6,y:1},
-        {x:-6,y:0},
-        {x:-6,y:-1},
+        {x:6,y:2},
+        {x:5,y:2},
+        {x:12,y:9},
+        {x:11,y:8},
+        {x:14,y:12},
+        {x:11,y:12},
+        {x:11,y:15},
+        {x:11,y:18},
+        {x:11,y:22},
+        {x:11,y:25},
+        {x:11,y:27},
+        {x:13,y:5},
+        {x:17,y:8},
+        {x:18,y:8},
+        {x:18,y:7},
+        {x:18,y:6},
+        {x:18,y:5},
+        {x:17,y:5},
+        {x:2,y:2},
+        {x:1,y:2},
+        {x:0,y:2},
+        {x:0,y:4},
+        {x:1,y:4},
+        {x:1,y:5},
+        {x:1,y:6},
+        {x:1,y:7},
+        {x:1,y:8},
+        {x:1,y:9},
     ],
 }
 const hitboxes = {
@@ -268,14 +280,42 @@ const hitboxes = {
     rightFlow: [],
     leftFlow: [],
 }
+const tile_map = [],
+    tile_map_transform = {
+        1: [3,0],
+        2: [0,1],
+        3: [1,1],
+        4: [0,3],
+        5: [3,1],
+        6: [2,0],
+        7: [3,2],
+        8: [1,0],
+        9: [0,2],
+        10: [1,3],
+        11: [2,1],
+        12: [3,3],
+        13: [2,3],
+        14: [1,2],
+        15: [2,2],
+    };
 
 const debuging = {
     showHitboxFlows: false,
     showScreenSplit: true,
     showInputControl: false,
+    showAimOffset: false,
 }
 
-function createMapHitboxes(){
+function createMapHitboxes(){//also creates tile_map
+
+    for(let c=0; c<map.width; c++){
+        map.cells.push([]);
+    }
+    map.blocks.forEach(b => {
+        map.cells[b.x][b.y] = 1;
+    });
+
+
     //clear old hitboxes
     hitboxes.downFlow = [];
     hitboxes.upFlow = [];
@@ -378,6 +418,28 @@ function createMapHitboxes(){
 
 }
 createMapHitboxes();
+function create_tile_map(){
+    //transform map boxes object into array
+    let map_boxes = [];
+    for(let w=0; w<=map.width; w++){
+        map_boxes[w] = [];
+    }
+    map.blocks.forEach(b => {
+        map_boxes[b.x][b.y] = true;
+    });
+    for(let w=0; w<=map.width; w++){
+        tile_map[w] = [];
+        for(let h=0; h<=map.height; h++){
+            let varient = (map_boxes[w-1]?.[h] ? 1 : 0) + 
+                (map_boxes[w]?.[h] ? 2 : 0) + 
+                (map_boxes[w-1]?.[h-1] ? 4 : 0) + 
+                (map_boxes[w]?.[h-1] ? 8 : 0);
+            if(varient) tile_map[w][h] = varient;
+        }
+    }
+    
+}
+create_tile_map();
 
 
 canvas.width = map.width * UNIT_WIDTH;
@@ -398,6 +460,7 @@ const camera = {
 const AGM = { //artificial game modification e.g. debuging
     forceFramerate : false,
     framerate : 60,
+    game_speed_modification : 1,
 };
 
 const randInt = (min, max) => Math.floor(Math.random()*(max-min)) + min;
@@ -416,7 +479,7 @@ function resizeGameDisplay(setUnitSize){//usually undefined
     let [wW,wH] = [window.innerWidth,window.innerHeight]
     canvas.width = wW;
     canvas.height = wH;
-    UNIT_WIDTH = setUnitSize ?? (wW/wH < 16/9 ? wH/18 : wW / 32);
+    UNIT_WIDTH = setUnitSize ?? Math.round(wW/wH < 16/9 ? wH/18 : wW / 32);
     camera.offSet = {x:(wW/UNIT_WIDTH/2)-.5,y:(wH/UNIT_WIDTH/2)-.5};
     //ratio: 32:18
     //totall size: 576
@@ -431,7 +494,7 @@ function gameLoop(){
     }
     
     let timestamp = new Date().getTime();
-    frameDelta = (timestamp - lastTimestamp)/1000;  //frameDelta in seconds
+    frameDelta = (timestamp - lastTimestamp)/1000 * AGM.game_speed_modification;  //frameDelta in seconds
     frameDelta = frameDelta > 500 ? 500 : frameDelta;  //prevent big delta when switching tabs - will be improved later
     drawBackground();
     updateCharacters();
@@ -453,75 +516,96 @@ function updateCharacters(){
 function handlePlayerInput(){
     if(player.input.jump && (player.data.isGrounded || player.data.coyoteTimer < .1) && !player.data.isJumping){
         console.log('Jump!!');
-        player.data.velocity.y -= 25 * player.data.movementControl;//arbitrary number for now, will be changed later on
+        player.data.velocity.y += 25 * player.data.movementControl;//arbitrary number for now, will be changed later on
         player.data.isGrounded = false;
         player.data.isJumping = true;
         player.data.coyoteTimer = 5;
     } else {
         if(player.data.isJumping) {
-        player.data.isJumping = player.data.velocity.y > 0 ? false : player.input.jump;
+        player.data.isJumping = player.data.velocity.y < 0 ? false : player.input.jump;
         }
         player.data.isStomping = !!(player.data.isStomping || (!player.input.jump && player.input.stomp));
     }
     player.data.velocity.x += ((player.input.mright-player.input.mleft) * 5 - player.data.velocity.x) * player.data.movementControl;//3: arbitrary as well
+
+    //calculate normalized aim vector
+    let cPos = camera.position,
+        pPos = player.data.position,
+        pDelta = [cPos.x - pPos.x, cPos.y - pPos.y],
+        w = UNIT_WIDTH,
+        rAPos = player.data.realAimPosition,
+        aimVector = [rAPos[0] + pDelta[0]*w, rAPos[1] + pDelta[1]*w],
+        length = (aimVector[0]**2 + aimVector[1]**2)**.5;
+    player.data.normalAimVector = [aimVector[0] / length, aimVector[1] / length];
 }
 
 //update player positions
 function updatePlayers(){
     characters.players.forEach(p => {
-        p.velocity.y += p.isGrounded ? 0 : p.isJumping ? 25*frameDelta : p.isStomping ? (35-p.velocity.y)*p.movementControl : (p.velocity.y+40*frameDelta) > 30 ? 30-p.velocity.y : 40*frameDelta;
+        p.velocity.y -= p.isGrounded ? 0 : p.isJumping ? 25*frameDelta : p.isStomping ? (35+p.velocity.y)*p.movementControl : (p.velocity.y-40*frameDelta) < -30 ? 30+p.velocity.y : 40*frameDelta;
         p.isGrounded = false;
+        /*if(p.velocity){
+            let m = p.velocity > 0 ? 0 : 1;
+            let x = Math.ceil(p.position.x + p.velocity.x * frameDelta - m),
+                y = Math.ceil(p.position.y),// + p.velocity.y * frameDelta),
+                double = y != p.position.y;
+            console.log(`Checking: ${x}, ${y}`);
+            if(map.cells[x]?.[y] || (double && map.cells[x]?.[y-1])) {
+                console.log('STOP - XXX');
+                p.position.x = x-1+2*m;
+                p.velocity.x = 0;
+            }
+        }*/
         if(p.velocity.x > 0) {
-            let free = true;
-            hitboxes.rightFlow.forEach(b => {
-                //check if: 1. has not stopped yet; 2. y-coords overlap; 3. is in front; 4. would hit
-                if(free && Math.abs(b.y+b.w/2 - p.position.y-.5) < (b.w+1)/2 && p.position.x+1 <= b.x &&  b.x - p.position.x - 1 < p.velocity.x*frameDelta) {
-                    //console.log('!!!OOKK!!!');
-                    free = false;
-                    p.position.x = b.x-1;
-                    p.velocity.x = 0;
-                };
-            });
+            /*
+            let m = p.velocity > 0 ? 0 : 1;
+            */
+            let x = Math.ceil(p.position.x + p.velocity.x * frameDelta),
+                y = Math.ceil(p.position.y),// + p.velocity.y * frameDelta),
+                double = y != p.position.y;
+            console.log(`Checking: ${x}, ${y}`);
+            if(map.cells[x]?.[y] || (double && map.cells[x]?.[y-1])) {
+                console.log('STOP - XXX');
+                p.position.x = x-1;
+                p.velocity.x = 0;
+            }
         } else if (p.velocity.x < 0) {
-            let free = true;
-            hitboxes.leftFlow.forEach(b => {
-                if(free && Math.abs(b.y+b.w/2 - p.position.y-.5) < (b.w+1)/2 && p.position.x >= b.x &&  p.position.x - b.x < -p.velocity.x*frameDelta) {
-                    //console.log('!!!OOKK!!!');
-                    free = false;
-                    p.position.x = b.x;
-                    p.velocity.x = 0;
-                };
-            });
+            let x = Math.ceil(p.position.x + p.velocity.x * frameDelta - 1),
+                y = Math.ceil(p.position.y),// + p.velocity.y * frameDelta),
+                double = y != p.position.y;
+            console.log(`Checking: ${x}, ${y}`);
+            if(map.cells[x]?.[y] || (double && map.cells[x]?.[y-1])) {
+                p.position.x = x+1;
+                p.velocity.x = 0;
+            }
         }
         p.position.x += p.velocity.x*frameDelta;
         if(p.velocity.y > 0) {
-            let free = true;
-            hitboxes.downFlow.forEach(b => {
-                if(free && Math.abs(b.x+b.w/2 - p.position.x-.5) < (b.w+1)/2 && p.position.y+1 <= b.y && b.y - p.position.y - 1 < p.velocity.y*frameDelta) {
-                    //console.log('Stopped DOWN');
-                    stopX = true;
-                    p.position.y = b.y-1;
-                    p.velocity.y = 0;
-                    p.isGrounded = true;
-                    p.isStomping = false;
-                }
-            });
+            let x = Math.ceil(p.position.x),
+                y = Math.ceil(p.position.y + p.velocity.y * frameDelta),// + p.velocity.y * frameDelta),
+                double = x != p.position.x;
+            console.log(`Checking: ${x}, ${y}`);
+            if(map.cells[x]?.[y] || (double && map.cells[x-1]?.[y])) {
+                p.position.y = y-1;
+                p.velocity.y = 0;
+            }
         } else if (p.velocity.y < 0) {
-            let free = true;
-            hitboxes.upFlow.forEach(b => {
-                if(free && Math.abs(b.x+b.w/2 - p.position.x-.5) < (b.w+1)/2 && p.position.y >= b.y && p.position.y - b.y < -p.velocity.y*frameDelta) {
-                    //console.log('Stopped UPP');
-                    stopX = true;
-                    p.position.y = b.y;
-                    p.velocity.y = 0;
-                }
-            });
+            let x = Math.ceil(p.position.x),
+                y = Math.ceil(p.position.y + p.velocity.y * frameDelta - 1),// + p.velocity.y * frameDelta),
+                double = x != p.position.x;
+            console.log(`Checking: ${x}, ${y}`);
+            if(map.cells[x]?.[y] || (double && map.cells[x-1]?.[y])) {
+                p.position.y = y+1;
+                p.velocity.y = 0;
+                p.isGrounded = true;
+                p.isStomping = false;
+            }
         }
         p.position.y += p.velocity.y*frameDelta;
-        p.velocity.y += p.isJumping ? 25*frameDelta : 40*frameDelta;
-        if(p.position.y+1 >= map.height){
+        p.velocity.y -= p.isGrounded ? 0 : p.isJumping ? 25*frameDelta : 40*frameDelta;
+        if(p.position.y <= 0){
             //console.log('ON THE FRICKING GROUND');
-            p.position.y = map.height-1;
+            p.position.y = 0;
             p.velocity.y = 0;
             p.isGrounded = true;
             p.isStomping = false;
@@ -533,7 +617,7 @@ function updatePlayers(){
     });
 };
 
-function handle_player_attack(normal_attack_vector){
+function handle_player_attack(normal_attack_vector = player.data.normalAimVector){
     switch(player.data.weapon.type){
         case 0:{
             //blowgun
@@ -545,8 +629,8 @@ function handle_player_attack(normal_attack_vector){
                     type: 0,//dart
                     from: data.id,
                     position: {
-                        x: p.x + .5,
-                        y: p.y + .5,
+                        x: p.x + .5 + normal_attack_vector[0],
+                        y: p.y + .5 + normal_attack_vector[1],
                     },
                     velocity: [normal_attack_vector[0] * s,
                         normal_attack_vector[1] * s],
@@ -639,9 +723,10 @@ function update_projectiles(){
             case 0:{
                 //dart
                 let old_position = p.position;
-                p.position.x += p.velocity[0] * frameDelta;
-                p.position.y += p.velocity[1] * frameDelta;
-                p.velocity[1] += frameDelta * 40;
+                let speedModif = 2;
+                p.position.x += p.velocity[0] * frameDelta / speedModif;
+                p.position.y += p.velocity[1] * frameDelta / speedModif;
+                p.velocity[1] -= frameDelta * 40 / speedModif;
                 //check for player/mob collision
                 let alive = true;
                 characters.players.forEach(player => {
@@ -657,7 +742,7 @@ function update_projectiles(){
                         }
                     }
                 });
-                if(alive && p.position.y >= map.height) dead_projectiles.push(c);
+                if(alive && p.position.y <= 0) dead_projectiles.push(c);
                 break;
             }
         }
@@ -693,6 +778,7 @@ function updateLerp(newLerp){
 function drawEverything(){
     //drawBackground();
     drawMap();
+    draw_projectiles();
     drawPlayers();
     drawAnimations();
     drawDebug();
@@ -704,12 +790,47 @@ function drawBackground(){
 }
 //draws map details such as blocks
 function drawMap(){
-    ctx.fillStyle = 'green';
+    //draw bottom line
+    ctx.strokeStyle = 'rgb(180, 180, 180)';
+    let w = UNIT_WIDTH,
+        y = relTC.y(0);
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+    /*ctx.fillStyle = 'green';
     map.blocks.forEach(block => {
-        ctx.fillRect(relTC.x(block.x),relTC.y(block.y),UNIT_WIDTH,UNIT_WIDTH);
-    });
+        //ctx.drawImage(img.block, relTC.x(block.x),relTC.y(block.y),UNIT_WIDTH,UNIT_WIDTH);
+        ctx.fillRect(Math.round(relTC.x(block.x)),Math.round(relTC.y(block.y)),w,w);
+    });*/
+    tile_map.forEach((l,x) => {
+        l.forEach((t, y) => {
+            if(t){
+                let xy = tile_map_transform[t];
+                ctx.drawImage(img.tile_set, xy[0]*32, xy[1]*32, 32, 32, Math.round(relTC.x(x-.5)),Math.round(relTC.y(y-.5)),UNIT_WIDTH,UNIT_WIDTH);
+            }
+        })
+    })
     ctx.strokeStyle = 'blue';
-    ctx.strokeRect(relTC.x(0),relTC.y(0),map.width*UNIT_WIDTH,map.height*UNIT_WIDTH)
+    ctx.strokeRect(relTC.x(0),y,map.width*w,map.height*w)
+}
+//draw projectiles before player so they appear behind weapons
+function draw_projectiles(){
+    //projectiles
+    ctx.fillStyle = 'rgb(150,0,0)';
+    projectiles.forEach(p => {
+        let x = relTC.x(p.position.x),
+            y = relTC.y(p.position.y),
+            vx = p.velocity[0],
+            vy = p.velocity[1],
+            v = (vx**2+vy**2)**.5,
+            r = Math.acos((vx / v)),
+            radian = (vy < 0 ? 2*Math.PI - r : r),
+            w = 14,
+            h = 6;
+        draw_image_rotated('dart', x, y, radian, w, h);
+        //ctx.fillRect(relTC.x(p.position.x)-3,relTC.y(p.position.y)-3,6,6);
+    });
 }
 //draw players, mobs etc.
 function drawPlayers(){
@@ -728,15 +849,30 @@ function drawPlayers(){
             y - w / 2
             );
             //healthbar
-            //let pH = p.health;
+            let pH = p.health;
             ctx.strokeStyle = 'grey';
             ctx.strokeRect(x-w*.2,y-w*.3,w*1.4,w*.2);
             /*ctx.fillStyle = `rgba(${100+1.5*pH},${1.5*pH},0,${1-animationData.lastDamageTick})`;
             ctx.fillRect(canvas.width/2-150,canvas.height-140,300*animationData.lastPlayerHealth/100,20);*/
-            ctx.fillStyle = 'green';//`rgb(${150*(80-pH)},${3*pH},0)`;
-            ctx.fillRect(x-w*.2,y-w*.3,w*p.health*0.014,w*.2);
+            ctx.fillStyle = `rgb(${150*(80-pH)},${3*pH},0)`;
+            ctx.fillRect(x-w*.2,y-w*.3,w*pH*0.014,w*.2);
             /*if(animationData.lastPlayerHealth!=pH) animationData.lastDamageTick += frameDelta;
             if(animationData.lastDamageTick>=1) animationData.lastPlayerHealth = pH;*/
+        }
+
+        //draw weapon
+        switch(p.weapon.type){
+            case 0:{
+                //blowgun
+                let ow = w/2,
+                    ox = p.normalAimVector[0]*w + ow,
+                    oy = p.normalAimVector[1]*w + ow,
+                    r = Math.acos(p.normalAimVector[0]),
+                    radian = (p.normalAimVector[1] < 0 ? 2*Math.PI - r : r);
+                draw_image_rotated('blowpipe', x+ox,y+oy, radian, 32, 10);
+                //ctx.drawImage(img.blowpipe,x+ox,y+oy,32,10);
+                break;
+            }
         }
     });
 
@@ -750,19 +886,13 @@ function drawAnimations(){
     //player health
     let pH = player.data.health;
     ctx.strokeStyle = 'grey';
-    ctx.strokeRect(canvas.width/2-151,canvas.height-71,302,22);
+    ctx.strokeRect(canvas.width/2-151,49,302,22);
     ctx.fillStyle = `rgba(${100+1.5*pH},${1.5*pH},0,${1-animationData.lastDamageTick})`;
-    ctx.fillRect(canvas.width/2-150,canvas.height-70,300*animationData.lastPlayerHealth/100,20);
+    ctx.fillRect(canvas.width/2-150,50,300*animationData.lastPlayerHealth/100,20);
     ctx.fillStyle = `rgb(${150*(80-pH)},${3*pH},0)`;
-    ctx.fillRect(canvas.width/2-150,canvas.height-70,300*pH/100,20);
+    ctx.fillRect(canvas.width/2-150,50,300*pH/100,20);
     if(animationData.lastPlayerHealth!=pH) animationData.lastDamageTick += frameDelta;
     if(animationData.lastDamageTick>=1) animationData.lastPlayerHealth = pH;
-
-    //projectiles
-    ctx.fillStyle = 'rgb(150,0,0)';
-    projectiles.forEach(p => {
-        ctx.fillRect(relTC.x(p.position.x)-3,relTC.y(p.position.y)-3,6,6);
-    });
 
     //mobile joystick
     if(mobileControl.isMoving){
@@ -822,7 +952,36 @@ function drawDebug(){
         ctx.fillRect(230,100,50,50);
         ctx.fillStyle = player.data.isStomping ? 'green' : 'red';
         ctx.fillRect(300,100,50,50);
+    } 
+    if (debuging.showAimOffset) {
+        //draw attack vector
+        ctx.strokeStyle = 'red';
+        let p = player.data.position,
+            x = relTC.x(p.x),
+            y = relTC.y(p.y),
+            w = UNIT_WIDTH;
+        ctx.beginPath();
+        ctx.moveTo(x+w/2, y+w/2);
+        let nAV = player.data.normalAimVector;
+        ctx.lineTo(x+w/2+(nAV[0])*50, y+w/2+(nAV[1])*50);
+        ctx.moveTo(x+w/2, y+w/2);
+        let cPos = camera.position,
+            pPos = player.data.position,
+            pDelta = [cPos.x - pPos.x, cPos.y - pPos.y];
+        ctx.lineTo(x+w/2+(pDelta[0]*w), y+w/2+(pDelta[1])*w);
+        ctx.stroke();
     }
+}
+
+function draw_image_rotated(imageId, x, y, radian, w, h) {
+    //draws image centered at x/y at radian angle
+    ctx.translate(x, y);
+    ctx.rotate(radian);
+    ctx.translate(-w / 2, -h / 2);
+    ctx.drawImage(img[imageId], 0, 0, w, h);
+    ctx.translate(w / 2, h / 2);
+    ctx.rotate(-radian);
+    ctx.translate(-x, -y);
 }
 
 function check_data(){
@@ -868,6 +1027,8 @@ function createCharacter(type, values){
                     cooldown: 0,
                     projectile_speed: 30,
                 },
+                realAimPosition: [0,0],
+                normalAimVector: [1,0],
             };
             idx = characters.players.length;
             idTable[playerId] = idx;
@@ -892,8 +1053,10 @@ function startGame(){
     let idx = createCharacter('player',{name:name,id:data.id});
     player.data = characters.players[idx];
     resizeGameDisplay();
+    innitialise_game_events();
     gameIsRunning=true;
     gameLoop();
+    focus_canvas();
 }
 
 
@@ -907,4 +1070,190 @@ function fadeMenu(fade, step){
         document.querySelector('#menu').style.transform = 'scale(1)';
         document.querySelector('#show-menu').style.opacity = 0;
     }
+}
+
+function focus_canvas(){
+    document.querySelector('#game-canvas-event-listener').focus();
+}
+
+
+// -- Level Editor --
+
+let level_editor_is_running = false,
+    editor_running_timer = 0,
+    editor_selected_grid = [0,0],
+    grid_dash_length = 1,
+    grid_dash_pattern = 1;
+
+function level_editor_update_loop(){
+    if(level_editor_is_running){
+        window.requestAnimationFrame(level_editor_update_loop);
+    }
+
+    let timestamp = new Date().getTime();
+    frameDelta = (timestamp - lastTimestamp)/1000;  //frameDelta in seconds
+    frameDelta = frameDelta > 500 ? 500 : frameDelta;  //prevent big delta when switching tabs - will be improved late
+
+    editor_running_timer += frameDelta;
+
+    update_editor_camera_position();
+    draw_level_preview();
+
+    lastTimestamp = timestamp;
+}
+
+function update_editor_camera_position(){
+    let dx = player.input.mright - player.input.mleft, dy = player.input.jump - player.input.stomp;
+    if(dx && dy) dx *= .71, dy *= .71;
+    camera.position.x += dx * frameDelta * 20;
+    camera.position.y += dy * frameDelta * 20;
+
+    //also update selected grid relative to new camre position
+    let w = UNIT_WIDTH,
+        cw = canvas.width,
+        ch = canvas.height,
+        ax = player.data.realAimPosition[0],
+        ay = player.data.realAimPosition[1],
+        rx = Math.round(camera.position.x + (ax - cw / 2) / w),
+        ry = Math.round(camera.position.y + (ay - ch / 2) / w);
+    rx = rx < 0 ? 0 : rx >= map.width ? map.width-1 : rx;
+    ry = ry < 0 ? 0 : ry >= map.height ? map.height-1 : ry;
+    editor_selected_grid = [rx, ry];
+}
+
+function draw_level_preview(){
+    //re-using "normal" drawing functions
+    drawBackground();
+    drawMap();
+    draw_grid();
+}
+
+function draw_grid(){
+    //draw bottom line
+    let w = UNIT_WIDTH,
+        dash_length = 4 * grid_dash_length,
+        w8 = w/dash_length,
+        dash_pattern = grid_dash_pattern ? [w8,w8*(dash_length-2),w8] : [w8,w8*(dash_length-2),w8,0],
+        sx = relTC.x(0),
+        sy = relTC.y(0),
+        ex = relTC.x(map.width),
+        ey = relTC.y(map.height);
+    ctx.strokeStyle = 'rgba(180, 180, 180, .5)';
+    ctx.setLineDash(dash_pattern);
+    ctx.beginPath();
+    for(let xm = 1; xm < map.width; xm++){
+        ctx.moveTo(sx+xm*w, sy);
+        ctx.lineTo(sx+xm*w, ey);
+    }
+    for(let ym = 1; ym < map.height; ym++){
+        ctx.moveTo(sx, sy+ym*w);
+        ctx.lineTo(ex, sy+ym*w);
+    }
+    ctx.stroke();
+    ctx.setLineDash([1,0]);
+
+    let opacity = Math.sin(editor_running_timer * 3) + 1;
+    ctx.fillStyle = `rgba(250, 0, 0, ${0.2 + opacity * 0.1})`;
+    ctx.fillRect(relTC.x(editor_selected_grid[0]), relTC.y(editor_selected_grid[1]), w, w)
+}
+
+function editor_modify_cell(){
+
+    map.cells[editor_selected_grid[0]][editor_selected_grid[1]] = !map.cells[editor_selected_grid[0]][editor_selected_grid[1]];
+
+    update_tile_map(editor_selected_grid[0], editor_selected_grid[1]);
+}
+
+function update_tile_map(x,y) {
+    for(let xc = 0; xc < 2; xc++){
+        for(let yc = 0; yc < 2; yc++){
+            console.log(xc);
+            let value = 0,
+                factor = 1;
+            for(let yt = 0; yt > -2; yt--){
+                for(let xt = -1; xt < 1; xt++){
+                    value += map.cells[x+xc+xt]?.[y+yc+yt] ? factor : 0;
+                    factor *= 2;
+                }
+            }
+            tile_map[x+xc][y+yc] = value;
+        }
+    }
+}
+
+function editor_change_grid(grid_value){
+    grid_dash_pattern = !!(grid_value%2);
+    grid_dash_length = grid_value**.5;
+}
+
+function editor_update_level_size(target_side, new_size_text){
+    let new_size = Number(new_size_text);
+    switch(target_side){
+        case 0:{
+            //width
+            map.width = new_size;
+            break;
+        }
+        case 1:{
+            //height
+            map.height = new_size;
+            break;
+        }
+    }
+}
+
+function editor_toggle_menu(){
+    let menu = document.querySelector('#level-editor-menu'),
+        toggle = menu.querySelector('.close');
+    if(menu.classList.contains('closed')){
+        menu.classList.remove('closed');
+        toggle.classList.remove('closed');
+    } else {
+        menu.classList.add('closed');
+        toggle.classList.add('closed');
+    }
+}
+
+function editor_test_level(){
+    console.log('Testing level setup...');
+    document.querySelector('#level-editor-menu').style.display = 'none';
+    document.querySelector('#menu').style.display = 'inline';
+    document.querySelector('#menu-return-to-editor').classList.remove('hidden');
+    if(!player.data.id){
+        let name = document.querySelector('#input-nickname').value;
+        let idx = createCharacter('player',{name:name,id:data.id});
+        player.data = characters.players[idx];
+    }
+    innitialise_editor_events(false);
+    innitialise_game_events();
+    level_editor_is_running = false;
+    gameIsRunning=true;
+    gameLoop();
+    focus_canvas();
+}
+
+function enter_editor_mode(){
+    console.log('Returning to editor...');
+    document.querySelector('#level-editor-menu').style.display = 'inline';
+    document.querySelector('#menu').style.display = 'none';
+    innitialise_editor_events();
+    innitialise_game_events(false);
+    level_editor_is_running = true;
+    gameIsRunning = false;
+    level_editor_update_loop();
+    focus_canvas();
+}
+
+function start_level_editor(){
+    console.log('Starting Level Editor');
+    document.querySelector('#start-menu').style.display = 'none';
+    document.querySelector('#chat').style.display = 'none';
+    document.querySelector('#level-editor-menu').style.display = 'inline';
+    document.querySelector('#level-editor-input-level-width').value = map.width;
+    document.querySelector('#level-editor-input-level-height').value = map.height;
+    resizeGameDisplay();
+    level_editor_is_running=true;
+    innitialise_editor_events();
+    level_editor_update_loop();
+    focus_canvas();
 }

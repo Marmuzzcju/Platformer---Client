@@ -25,20 +25,14 @@
             Show hitbox-flow: <input type="checkbox" onchange="debuging.showHitboxFlows=this.checked"></br>
             Show screen segments: <input type="checkbox" onchange="debuging.showScreenSplit=this.checked" checked></br>
             Show input control: <input type="checkbox" onchange="debuging.showInputControl=this.checked"></br>
+            Show aim offset: <input type="checkbox" onchange="debuging.showAimOffset=this.checked"></br>
+        </div>
+        <div id="menu-return-to-editor" class="hidden">
+            <button onclick="enter_editor_mode();">< Return to editor</button>
         </div>
     </div>
     <div id="chat">
         <div id="chat-history">
-            <!-- <div class="message"><span class="bold"><span class="author">Player</span>: </span>Hello there, payer here</div>
-            <div class="message"><span class="bold"><span class="author">Player</span>: </span>Hello there, payer here</div>
-            <div class="message"><span class="bold"><span class="author">Player</span>: </span>Hello there, payer here</div>
-            <div class="message"><span class="bold"><span class="author">Player</span>: </span>Hello there, payer here</div>
-            <div class="message"><span class="bold"><span class="author">Player</span>: </span>Hello there, payer here</div>
-            <div class="message"><span class="bold"><span class="author">Player</span>: </span>Hello there, payer here</div>
-            <div class="message"><span class="bold"><span class="author">Player</span>: </span>Hello there, payer here</div>
-            <div class="message"><span class="bold"><span class="author">Player</span>: </span>Hello there, payer here</div>
-            <div class="message"><span class="bold"><span class="author">Player</span>: </span>Hello there, payer here</div>
-            <div class="message"><span class="bold"><span class="author">Player</span>: </span>Hello there, payer here</div> -->
         </div>
         <input type="text" id="chat-input" placeholder="Enter Message">
     </div>
@@ -47,7 +41,28 @@
             <input type="text" id="input-nickname" placeholder="Enter Nickname"></br>
             <input type="text" id="input-server-id" placeholder="Enter Server Id"></br>
             <button onclick="connect_server();" id="btn-start-game">Connect to Server</button></br>
+            <button onclick="start_level_editor();" id="btn-start-game">Level Editor</button></br>
             <button onclick="startGame();" class="small">Test offline</button>
+        </div>
+    </div>
+    <div id="level-editor-menu" class="">
+        <div class="close" onclick="editor_toggle_menu()">
+            <span><</span>
+            <span><</span>
+        </div>
+        <div class="content">
+            <div class="titel head">Editor Menu</div>
+            <div class="separator"></div>
+            <button onclick="editor_test_level();">Test Level</button>
+            <button onclick="editor_test_level();">Test Level</button>
+            <button onclick="editor_test_level();">Test Level</button>
+            <div class="separator"></div>
+            <div class="titel">Visuals</div>
+            <div class="option"><span>Grid Varient:</span><input type="number" value="1" step="1" min="0" oninput="editor_change_grid(this.value)"></div>
+            <div class="separator"></div>
+            <div class="titel">Level Properties</div>
+            <div class="option"><span>Width</span><input type="number" id="level-editor-input-level-width" value="1" step="1" min="1" oninput="editor_update_level_size(0, this.value)">
+                <span>Height</span><input type="number" id="level-editor-input-level-height" value="1" step="1" min="1" oninput="editor_update_level_size(1, this.value)"></div>
         </div>
     </div>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>

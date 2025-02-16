@@ -11,6 +11,14 @@ input[type='text'] {
     cursor: text;
 }
 
+input[type=number]:not(:hover)::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+
+.hidden {
+    display: none !important;
+}
+
 #game-canvas-event-listener {
     cursor: crosshair;
 }
@@ -19,6 +27,7 @@ input[type='text'] {
     position: fixed;
     top: 0;
     left: 0;
+    transform: scale(1, -1);
 }
 
 #menu {
@@ -64,8 +73,20 @@ input[type='text'] {
     cursor: pointer;
 }
 
+#menu-return-to-editor {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#menu-return-to-editor > button {
+    background-color: rgba(80,80,80,0.3);
+    border: 2px solid var(--fontWhite);
+    color: var(--fontWhite);
+}
+
 
 #chat {
+    pointer-events: none;
     position: fixed;
     bottom: 3px;
     left: 3px;
@@ -77,17 +98,13 @@ input[type='text'] {
     max-width: 300px;
     display: flex;
     flex-direction: column-reverse;
-    pointer-events: none;
     
     background: -webkit-linear-gradient(90deg, var(--fontWhite) 0%, var(--fontWhite) 50%, rgba(0,0,0,0) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
-#chat-history > * {
-    pointer-events: none;
-}
 #chat-history.opened {
-    max-height: 240px;
+    height: 240px;
     pointer-events: all;
 }
 
@@ -102,6 +119,97 @@ input[type='text'] {
     border: 1px solid;
     border-image: linear-gradient(to right, var(--fontWhite) 0%, rgba(0,0,0,0) 100%) 1;
     border-radius: 1px;
+    pointer-events: all;
+}
+
+
+#level-editor-menu {
+    position: fixed;
+    display: none;
+    top: 0px;
+    left: 0px;
+    height: 100%;
+    width: 200px;
+    background-color: rgba(50,50,50,0.5);
+    transition: left 1s;
+}
+#level-editor-menu.closed {
+    left: -200px;
+}
+
+#level-editor-menu .close {
+    position: fixed;
+    top: 0px;
+    left: 200px;
+    transition: left 1s;
+    background-color: inherit;
+    width: 20px;
+    height: 70px;
+    color: var(--fontWhite);
+    clip-path: polygon(0 0, 100% 20%, 100% 80%, 0 100%);
+    font-family: sans-serif;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    border-left: 1px solid gray;
+    cursor: pointer;
+}
+#level-editor-menu .close.closed {
+    left: 0px;
+}
+#level-editor-menu .close > span {
+    transition: rotate 0.5s;
+    transition-delay: 0.5s;
+    transition-timing-function: linear;
+}
+#level-editor-menu .close.closed > span {
+    rotate: 180deg;
+}
+
+#level-editor-menu .content {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: start;
+}
+#level-editor-menu .content * {
+    color: var(--fontWhite);
+}
+#level-editor-menu .content > button {
+    margin: 5px 0px;
+    background: none;
+    font-size: 17px;
+    width: 90%;
+    border: 2px solid;
+    border-image: linear-gradient(to right, var(--fontWhite) 0%, rgba(0,0,0,0) 100%) 1;
+    transition: border-image .5s;
+}
+#level-editor-menu .content > button:hover {
+    border-image: linear-gradient(to right, var(--fontWhite) 0%, var(--fontWhite) 100%) 1;
+}
+#level-editor-menu .content > .separator {
+    width: 90%;
+    margin: 10px 0px;
+    border: 1px solid;
+    border-image: linear-gradient(to right, rgba(0,0,0,0) 0%, var(--fontWhite) 30%, var(--fontWhite) 70%, rgba(0,0,0,0) 100%) 1;
+}
+#level-editor-menu .content > .titel {
+    font-size: 20px;
+    margin: 3px 0px;
+}
+#level-editor-menu .content > .head {
+    font-size: 21px;
+    margin: 10px 0px 3px;
+}
+#level-editor-menu .content > .option > span {
+    margin-right: 5px;
+}
+#level-editor-menu .content input[type="number"] {
+    background: none;
+    max-width: 25px;
+    border-radius: 4px;
 }
 
 
@@ -120,7 +228,7 @@ input[type='text'] {
 #start-menu-options {
     position: fixed;
     width: 400px;
-    height: 200px;
+    height: 230px;
     top: calc(50% - 100px);
     left: calc(50% - 200px);
     border: 1px solid grey;
@@ -141,6 +249,8 @@ input[type='text'] {
     width: 150px;
     font-size: medium;
 }
+
+
 /*
 #input-server-id {
     top: calc(40% - 60px);
