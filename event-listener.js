@@ -280,7 +280,7 @@ function handle_editor_input(e){
             switch(e.button){
                 case 0:{
                     //place block ig
-                    editor_modify_cell();
+                    editor_modify_cells();
                     break;
                 }
             }

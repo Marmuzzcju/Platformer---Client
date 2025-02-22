@@ -26,6 +26,7 @@
             Show screen segments: <input type="checkbox" onchange="debuging.showScreenSplit=this.checked" checked></br>
             Show input control: <input type="checkbox" onchange="debuging.showInputControl=this.checked"></br>
             Show aim offset: <input type="checkbox" onchange="debuging.showAimOffset=this.checked"></br>
+            Show cell value: <input type="checkbox" onchange="debuging.show_cell_value=this.checked"></br>
         </div>
         <div id="menu-return-to-editor" class="hidden">
             <button onclick="enter_editor_mode();">< Return to editor</button>
@@ -53,16 +54,27 @@
         <div class="content">
             <div class="titel head">Editor Menu</div>
             <div class="separator"></div>
-            <button onclick="editor_test_level();">Test Level</button>
-            <button onclick="editor_test_level();">Test Level</button>
-            <button onclick="editor_test_level();">Test Level</button>
-            <div class="separator"></div>
             <div class="titel">Visuals</div>
             <div class="option"><span>Grid Varient:</span><input type="number" value="1" step="1" min="0" oninput="editor_change_grid(this.value)"></div>
             <div class="separator"></div>
             <div class="titel">Level Properties</div>
             <div class="option"><span>Width</span><input type="number" id="level-editor-input-level-width" value="1" step="1" min="1" oninput="editor_update_level_size(0, this.value)">
                 <span>Height</span><input type="number" id="level-editor-input-level-height" value="1" step="1" min="1" oninput="editor_update_level_size(1, this.value)"></div>
+            <div class="separator"></div>
+            <div class="titel">Tools</div>
+            <div class="option"><span>Brush Size:</span><input id="editor-menu-input-brush-size" type="range" value="1" step="0.5" min="1" max="9" oninput="editor_update_brush(0, Number(this.value))"><span id="editor-menu-brush-size" class="range-value">1.0</span></div>
+            <div class="option"><span>Brush Shape:</span><select oninput="editor_update_brush(1, Number(this.value))"><option value="0">Square</option><option value="1">Circle</option></select></div>
+            <div class="option"><span>Brush Type:</span><select oninput="editor_update_brush(2, Number(this.value))"><option value="0">Fill</option><option value="1">Invert</option><option value="2">Remove</option></select></div>
+            <div class="separator"></div>
+            <div class="titel">Level Data</div>
+            <button onclick="editor_save_level();">Save</button>
+            <button onclick="editor_load_level();">Load</button>
+            <button onclick="editor_export_level();">Export</button>
+            <button onclick="document.querySelector('#editor-import-file').click();">Import</button>
+            <input type="file" id="editor-import-file" accept=".txt" onchange="editor_import_level(this)" class="hidden">
+            <div class="separator"></div>
+            <button onclick="editor_test_level();">Test Level</button>
+            <button onclick="exit_level_editor();">Exit Editor</button>
         </div>
     </div>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>

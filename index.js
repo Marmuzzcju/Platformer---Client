@@ -304,6 +304,7 @@ const debuging = {
     showScreenSplit: true,
     showInputControl: false,
     showAimOffset: false,
+    show_cell_value: false,
 }
 
 function createMapHitboxes(){//also creates tile_map
@@ -418,7 +419,7 @@ function createMapHitboxes(){//also creates tile_map
 
 }
 createMapHitboxes();
-function create_tile_map(){
+function create_tile_map_by_boxes(){
     //transform map boxes object into array
     let map_boxes = [];
     for(let w=0; w<=map.width; w++){
@@ -439,7 +440,20 @@ function create_tile_map(){
     }
     
 }
-create_tile_map();
+create_tile_map_by_boxes();
+
+function create_tile_map_by_cells(){
+    for(let w=0; w<=map.width; w++){
+        tile_map[w] = [];
+        for(let h=0; h<=map.height; h++){
+            let varient = (map.cells[w-1]?.[h] ? 1 : 0) + 
+                (map.cells[w]?.[h] ? 2 : 0) + 
+                (map.cells[w-1]?.[h-1] ? 4 : 0) + 
+                (map.cells[w]?.[h-1] ? 8 : 0);
+            if(varient) tile_map[w][h] = varient;
+        }
+    }
+}
 
 
 canvas.width = map.width * UNIT_WIDTH;
@@ -809,10 +823,10 @@ function drawMap(){
                 let xy = tile_map_transform[t];
                 ctx.drawImage(img.tile_set, xy[0]*32, xy[1]*32, 32, 32, Math.round(relTC.x(x-.5)),Math.round(relTC.y(y-.5)),UNIT_WIDTH,UNIT_WIDTH);
             }
-        })
-    })
+        });
+    });
     ctx.strokeStyle = 'blue';
-    ctx.strokeRect(relTC.x(0),y,map.width*w,map.height*w)
+    ctx.strokeRect(relTC.x(0),y,map.width*w,map.height*w);
 }
 //draw projectiles before player so they appear behind weapons
 function draw_projectiles(){
@@ -971,6 +985,21 @@ function drawDebug(){
         ctx.lineTo(x+w/2+(pDelta[0]*w), y+w/2+(pDelta[1])*w);
         ctx.stroke();
     }
+    if (debuging.show_cell_value) {
+        let w = UNIT_WIDTH;
+        ctx.fillStyle = 'white';
+        ctx.font = `${w/3}px Verdana`;
+        for(let x = 0; x < map.width; x++){
+            for(let y = 0; y < map.height; y++){
+                let value = map.cells[x][y] ?? 0;
+                ctx.fillText(
+                value,
+                relTC.x(x) + w/2,
+                relTC.y(y) + w/2
+                );
+            }
+        }
+    }
 }
 
 function draw_image_rotated(imageId, x, y, radian, w, h) {
@@ -1070,6 +1099,7 @@ function fadeMenu(fade, step){
         document.querySelector('#menu').style.transform = 'scale(1)';
         document.querySelector('#show-menu').style.opacity = 0;
     }
+    focus_canvas();
 }
 
 function focus_canvas(){
@@ -1081,9 +1111,14 @@ function focus_canvas(){
 
 let level_editor_is_running = false,
     editor_running_timer = 0,
-    editor_selected_grid = [0,0],
+    editor_selected_position = [0,0],
+    editor_selected_grids = [[0,0]],
+    editor_brush_shape = 0,
+    editor_brush_type = 0,
+    editor_brush_size = 1,
     grid_dash_length = 1,
-    grid_dash_pattern = 1;
+    grid_dash_pattern = 1,
+    editor_level_version = 0;
 
 function level_editor_update_loop(){
     if(level_editor_is_running){
@@ -1114,11 +1149,14 @@ function update_editor_camera_position(){
         ch = canvas.height,
         ax = player.data.realAimPosition[0],
         ay = player.data.realAimPosition[1],
-        rx = Math.round(camera.position.x + (ax - cw / 2) / w),
-        ry = Math.round(camera.position.y + (ay - ch / 2) / w);
+        rx = camera.position.x + (ax - cw / 2) / w,
+        ry = camera.position.y + (ay - ch / 2) / w;
     rx = rx < 0 ? 0 : rx >= map.width ? map.width-1 : rx;
     ry = ry < 0 ? 0 : ry >= map.height ? map.height-1 : ry;
-    editor_selected_grid = [rx, ry];
+    if([rx, ry] != editor_selected_position){
+        editor_selected_position = [rx, ry];
+        editor_update_selected_grids();
+    }
 }
 
 function draw_level_preview(){
@@ -1126,6 +1164,7 @@ function draw_level_preview(){
     drawBackground();
     drawMap();
     draw_grid();
+    drawDebug();
 }
 
 function draw_grid(){
@@ -1154,17 +1193,79 @@ function draw_grid(){
 
     let opacity = Math.sin(editor_running_timer * 3) + 1;
     ctx.fillStyle = `rgba(250, 0, 0, ${0.2 + opacity * 0.1})`;
-    ctx.fillRect(relTC.x(editor_selected_grid[0]), relTC.y(editor_selected_grid[1]), w, w)
+    editor_selected_grids.forEach(grid => {
+        ctx.fillRect(relTC.x(grid[0]), relTC.y(grid[1]), w, w);
+    });
 }
 
-function editor_modify_cell(){
+function editor_modify_cells(){
+    let max = [0,0], min = [Infinity, Infinity],
+        w = map.width, h = map.height;
+    switch(editor_brush_type){
+        case 0:{
+            //fill
+            editor_selected_grids.forEach(grid => {
+                if(grid[0] >= 0 && grid[0] < w && grid[1] >= 0 && grid[1] < h){
+                    map.cells[grid[0]][grid[1]] = 1;
+                    max[0] = Math.max(max[0], grid[0]);
+                    max[1] = Math.max(max[1], grid[1]);
+                    min[0] = Math.min(min[0], grid[0]);
+                    min[1] = Math.min(min[1], grid[1]);
+                }
+            });
+            break;
+        }
+        case 1:{
+            //invert
+            editor_selected_grids.forEach(grid => {
+                if(grid[0] >= 0 && grid[0] < w && grid[1] >= 0 && grid[1] < h){
+                    map.cells[grid[0]][grid[1]] = Number(!map.cells[grid[0]][grid[1]]);
+                    max[0] = Math.max(max[0], grid[0]);
+                    max[1] = Math.max(max[1], grid[1]);
+                    min[0] = Math.min(min[0], grid[0]);
+                    min[1] = Math.min(min[1], grid[1]);
+                }
+            });
 
-    map.cells[editor_selected_grid[0]][editor_selected_grid[1]] = !map.cells[editor_selected_grid[0]][editor_selected_grid[1]];
+            break;
+        }
+        case 2:{
+            //remove
+            editor_selected_grids.forEach(grid => {
+                if(grid[0] >= 0 && grid[0] < w && grid[1] >= 0 && grid[1] < h){
+                    map.cells[grid[0]][grid[1]] = 0;
+                    max[0] = Math.max(max[0], grid[0]);
+                    max[1] = Math.max(max[1], grid[1]);
+                    min[0] = Math.min(min[0], grid[0]);
+                    min[1] = Math.min(min[1], grid[1]);
+                }
+            });
 
-    update_tile_map(editor_selected_grid[0], editor_selected_grid[1]);
+            break;
+        }
+    }
+    console.log(`Lower Bound: ${min[0]}, ${min[1]} - Upper Bound: ${max[0]}, ${max[1]}`)
+    update_tile_map_area(min, max);
 }
 
-function update_tile_map(x,y) {
+function update_tile_map_area(lower_bound, upper_bound) {
+    for(let xm = lower_bound[0]; xm<=upper_bound[0]+1; xm++){
+        for(let ym = lower_bound[1]; ym<=upper_bound[1]+1; ym++){
+            let value = 0,
+                factor = 1;
+            for(let yt = 0; yt > -2; yt--){
+                for(let xt = -1; xt < 1; xt++){
+                    value += map.cells[xm+xt]?.[ym+yt] ? factor : 0;
+                    factor *= 2;
+                }
+            }
+            tile_map[xm][ym] = value;
+            
+        }
+    }
+}
+
+function update_tile_map_tile(x,y) {
     for(let xc = 0; xc < 2; xc++){
         for(let yc = 0; yc < 2; yc++){
             console.log(xc);
@@ -1212,6 +1313,152 @@ function editor_toggle_menu(){
         menu.classList.add('closed');
         toggle.classList.add('closed');
     }
+    focus_canvas();
+}
+
+function editor_update_brush(update_type, new_value){
+    switch(update_type){
+        case 0:{
+            //brush size
+            document.querySelector('#editor-menu-brush-size').innerHTML = new_value == Math.round(new_value) ? `${new_value}.0` : new_value;
+            editor_brush_size = new_value;
+            break;
+        }
+        case 1:{
+            //brush shape
+            editor_brush_shape = new_value;
+            break;
+        }
+        case 2:{
+            //brush type
+            editor_brush_type = new_value;
+            break;
+        }
+    }
+}
+
+function editor_update_selected_grids(){
+    switch(editor_brush_shape){
+        case 0:{
+            //square
+            let useable_brush_size = Math.round(editor_brush_size);
+            editor_selected_grids = [];
+            for(let xm = -useable_brush_size / 2; xm < (useable_brush_size/2); xm++){
+                for(let ym = -useable_brush_size / 2; ym < useable_brush_size/2; ym++){
+                    editor_selected_grids.push([Math.ceil(editor_selected_position[0]+xm),Math.ceil(editor_selected_position[1]+ym)]);
+                }
+            }
+            break;
+        }
+        case 1:{
+            //circle
+            let useable_brush_size = editor_brush_size;
+            editor_selected_grids = [];
+            for(let xm = -useable_brush_size / 2; xm < (useable_brush_size/2); xm++){
+                for(let ym = -useable_brush_size / 2; ym < useable_brush_size/2; ym++){
+                    let target_cell = [Math.ceil(editor_selected_position[0]+xm),Math.ceil(editor_selected_position[1]+ym)],
+                        distance = ((editor_selected_position[0]-target_cell[0])**2+(editor_selected_position[1]-target_cell[1])**2)**.5;
+                    if(distance < editor_brush_size/2){
+                        editor_selected_grids.push(target_cell);
+                    }
+                }
+            }
+            break;
+        }
+    }
+}
+
+function create_level_file(){
+    //returns string containing all level data
+    let cell_data = '',
+        w = map.width,
+        h = map.height;
+    for(let x=0; x<w; x++){
+        let row_data = '';
+        for(let y=0; y<h; y++){
+            if(isNaN(map.cells[x][y] ?? 0)) {
+                console.log('Error: wrong cell value type');
+                console.log(map.cells[x][y]);
+            }
+            row_data += map.cells[x][y] ?? 0;
+        }
+        cell_data += row_data;
+    }
+    return `${editor_level_version},${map.width},${map.height},${cell_data}`;
+}
+
+function editor_save_level(){
+    //save level locally
+    localStorage.setItem('editor_saved_level', create_level_file());
+}
+
+function build_level_from_string(level_string){
+    let level_data = level_string.split(',');
+        level_version = level_data[0];
+    switch(level_version){
+        case '0':{
+            let w = Number(level_data[1]),
+                h = Number(level_data[2]),
+                cell_data = level_data[3];
+            map.width = w;
+            map.height = h;
+            map.cells = [];
+            for(let x=0; x<w; x++){
+                let row = [];
+                for(let y=0; y<h; y++){
+                    row.push(Number(cell_data[x*h+y]));
+                }
+                map.cells.push(row);
+            }
+            create_tile_map_by_cells();
+            break;
+        }
+        default:{
+            console.log(`Tried to load unknown Level Version: ${level_version}`);
+        }
+    }
+
+}
+
+function editor_load_level(){
+    //load locally saved level
+    let saved_level_data = localStorage.getItem('editor_saved_level');
+    build_level_from_string(saved_level_data);
+}
+
+function editor_export_level(){
+    //export level data as .txt file
+    let filename = `${new Date().getTime()}-custom-platformer-level`,
+        text_content = create_level_file(),
+        element = document.createElement("a");
+    element.setAttribute(
+      "href",
+      "data:text/plain;charset=utf-8," + encodeURIComponent(text_content)
+    );
+    element.setAttribute("download", filename);
+    element.style.display = "none";
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+}
+
+function editor_import_level(input){
+    //import level data from .txt file
+    let file = input.files[0],
+        reader = new FileReader();
+
+    reader.readAsText(file);
+
+    reader.onload = function () {
+        console.log(reader.result);
+        build_level_from_string(reader.result);
+    };
+
+    reader.onerror = function () {
+        console.log(reader.error);
+        alert("Error: failed loading level file");
+        return;
+    };
 }
 
 function editor_test_level(){
@@ -1256,4 +1503,12 @@ function start_level_editor(){
     innitialise_editor_events();
     level_editor_update_loop();
     focus_canvas();
+}
+
+function exit_level_editor(){
+    console.log('Exiting Level Editor');
+    document.querySelector('#start-menu').style.display = 'inline';
+    document.querySelector('#level-editor-menu').style.display = 'none';
+    level_editor_is_running=false;
+    innitialise_editor_events(false);
 }

@@ -176,6 +176,7 @@ input[type=number]:not(:hover)::-webkit-inner-spin-button {
 }
 #level-editor-menu .content * {
     color: var(--fontWhite);
+    background: none;
 }
 #level-editor-menu .content > button {
     margin: 5px 0px;
@@ -203,6 +204,9 @@ input[type=number]:not(:hover)::-webkit-inner-spin-button {
     font-size: 21px;
     margin: 10px 0px 3px;
 }
+#level-editor-menu .content > .option {
+    margin: 2px 0px;
+}
 #level-editor-menu .content > .option > span {
     margin-right: 5px;
 }
@@ -211,6 +215,14 @@ input[type=number]:not(:hover)::-webkit-inner-spin-button {
     max-width: 25px;
     border-radius: 4px;
 }
+#level-editor-menu .content input[type="range"] {
+    background: none;
+    max-width: 70px;
+    transform: translate(0, 20%);
+}
+/*#level-editor-menu .content select {
+    color: red;
+}*/
 
 
 #realLerp {width: 60px;}
