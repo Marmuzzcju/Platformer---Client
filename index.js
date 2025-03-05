@@ -10,11 +10,21 @@ const data = {
     connection: {},
 }
 
+let has_local_storage = false,
+    is_dev = false,
+    is_offline = true;
+
 function open_peer(){
     let peer = new Peer();
     peer.on('open', function(id) {
         console.log('My peer ID is: ' + id);
         data.id = id;
+        is_offline = false;
+    });
+    peer.on('error', (e) => {
+        console.log('Error:');
+        console.log(e);
+        data.id = 1;
     });
     data.peer = peer;
 }
@@ -43,10 +53,6 @@ function connect_server(provided_server_id){
         //start client game
         startGame();
     });
-}
- 
-function page_config(){
-    open_peer();
 }
 
 function send_message(action, messageData){
@@ -161,7 +167,6 @@ function sendUpdatedInput(){
     send_message(action, `${input}${seperator_key}${position}`);
 }
 
-page_config();
 
 const keybinds = {
     jump: 87,
@@ -273,6 +278,7 @@ const map = {
         {x:1,y:8},
         {x:1,y:9},
     ],
+    level_string: '0,42,28,111111111111111111111111111100000000000100000011000000000010000000000010000100000000001000110000011110000000000011000111110001111110000000001111111111000011111100000000111111111110000111110000000011111111111000000000000000001111111111100000000000000000111110000000000010000000000011111111001100001000000000001111111100110000000000000000111111110011000000000000000011111111000100000000000000001111000110010000011100000000111100001100000111110000000011110000010000011110000000000101110001100011110000000000010011110010001111110000000001000000001000111111000010000110000001000000000000001100001000000000011000000000000000011001000001110000000000000000000000000111111100000000000000000000011111110000000000000100000001111111000000000000111000000111111110000000110011100000001111110000000010000110000000001100000000000000011100000000000000000000000110001000000000000000000000100000000000000000000000000010000100000000000000000000010000010010000100000000000001000010001000110000000000001100111000100011001100000000111111100110001101110000000011111100010000111110000000001111000010000011110000000000111111100000001111000000000011111110000000111111000000001111111111111111111111111111',
 }
 const hitboxes = {
     downFlow: [],
@@ -300,7 +306,6 @@ const tile_map = [],
     };
 
 const debuging = {
-    showHitboxFlows: false,
     showScreenSplit: true,
     showInputControl: false,
     showAimOffset: false,
@@ -309,113 +314,15 @@ const debuging = {
 
 function createMapHitboxes(){//also creates tile_map
 
-    for(let c=0; c<map.width; c++){
+
+    build_level_from_string(map.level_string);
+    /*for(let c=0; c<map.width; c++){
         map.cells.push([]);
     }
     map.blocks.forEach(b => {
         map.cells[b.x][b.y] = 1;
-    });
-
-
-    //clear old hitboxes
-    hitboxes.downFlow = [];
-    hitboxes.upFlow = [];
-    hitboxes.leftFlow = [];
-    hitboxes.rightFlow = [];
-
-
-    let protoJointHitboxes = {
-        up : {},
-        down : {},
-        left : {},
-        right : {},
-    };
-    //get all hitbox-flows
-    let identifier = ['up','down','left','right'];
-    map.blocks.forEach(block => {
-        let position = [block.y+1,block.y,block.x+1,block.x];
-        for(let c=0;c<4;c++){
-            let protoHit = protoJointHitboxes[identifier[c]],
-                id = position[c],
-                axisPosition = c < 2 ? block.x : block.y;
-            if(Array.isArray(protoHit[id])){
-                protoHit[id].push(axisPosition);
-            } else protoHit[id] = [axisPosition];
-        }
-    });
-
-    console.log(protoJointHitboxes);
-
-    //unify adjecent hitbox-flows
-    let unifiedProtoJointHitboxes = {
-        up : {},
-        down : {},
-        left : {},
-        right : {},
-    };
-    for(let c=0;c<4;c++){
-        Object.entries(protoJointHitboxes[identifier[c]]).forEach(row => {
-            row[1].sort((a, b) => {return a-b;});
-            let realFlow = [];
-            row[1].forEach(hitFlow => {
-                let lastFlow = realFlow.at(-1);
-                if(!lastFlow || (lastFlow[c<2?'x':'y'] + lastFlow.w < hitFlow)){
-                    realFlow.push({[c<2?'x':'y']: hitFlow, w: 1});
-                } else lastFlow.w++;
-            });
-            unifiedProtoJointHitboxes[identifier[c]][row[0]] = realFlow;
-        });
-    }
-
-    console.log(unifiedProtoJointHitboxes);
-
-    //remove unreachable hitflows
-    for(let c=0;c<4;c+=2){
-        let xy = c < 2 ? 'x' : 'y';
-        Object.entries(unifiedProtoJointHitboxes[identifier[c]]).forEach(row => {
-            let correspondingRow = unifiedProtoJointHitboxes[identifier[c+1]][row[0]];
-            if(correspondingRow){
-                //only if hitflows exist on that row
-                //go through hitflows one-by-one, check which can be removed
-                let unnecessaryFlows = [];
-                row[1].forEach((hit, idx) => {
-                    let unnecessaryCorFlows = [];
-                    let s = hit[xy], e = s + hit.w;
-                    //check if any hitflow fully covers that / this covers any other hitflow fully
-                    correspondingRow.forEach(cHit => {
-                        if(cHit[xy] <= s && cHit[xy] + cHit.w >= e){
-                            //hitflow fully covered; can be removed
-                            unnecessaryFlows.push(idx);
-                        }
-                        if(cHit[xy] >= s && cHit[xy] + cHit.w <= e){
-                            //corresponding hitflow fully covered; can be removed
-                            unnecessaryCorFlows.push(idx);
-                        }
-                    });
-                    unnecessaryCorFlows.forEach((idx, c) => {
-                        correspondingRow.splice(idx-c,1);
-                    });
-                });
-                unnecessaryFlows.forEach((idx,c)=>{
-                    row[1].splice(idx-c,1);
-                });
-            }
-        });
-    }
-
-    console.log(unifiedProtoJointHitboxes);
-
-    //write new hitboxes into global hitbox flow
-    let globalIdentifier = ['upFlow','downFlow','leftFlow','rightFlow'];
-    for(let c=0;c<4;c++){
-        let x = c < 2 ? 'x' : 'y', y = c < 2 ? 'y' : 'x';
-        Object.entries(unifiedProtoJointHitboxes[identifier[c]]).forEach(row => {
-            row[1].forEach(hitflow => {
-                hitboxes[globalIdentifier[c]].push({[x]:hitflow[x],[y]:Number(row[0]),w:hitflow.w});
-            });
-        });
-
-    }
+    });*/
+    create_tile_map_by_cells();
 
 }
 createMapHitboxes();
@@ -440,7 +347,7 @@ function create_tile_map_by_boxes(){
     }
     
 }
-create_tile_map_by_boxes();
+//create_tile_map_by_boxes();
 
 function create_tile_map_by_cells(){
     for(let w=0; w<=map.width; w++){
@@ -529,7 +436,6 @@ function updateCharacters(){
 //handle user input, move player etc.
 function handlePlayerInput(){
     if(player.input.jump && (player.data.isGrounded || player.data.coyoteTimer < .1) && !player.data.isJumping){
-        console.log('Jump!!');
         player.data.velocity.y += 25 * player.data.movementControl;//arbitrary number for now, will be changed later on
         player.data.isGrounded = false;
         player.data.isJumping = true;
@@ -577,9 +483,7 @@ function updatePlayers(){
             let x = Math.ceil(p.position.x + p.velocity.x * frameDelta),
                 y = Math.ceil(p.position.y),// + p.velocity.y * frameDelta),
                 double = y != p.position.y;
-            console.log(`Checking: ${x}, ${y}`);
             if(map.cells[x]?.[y] || (double && map.cells[x]?.[y-1])) {
-                console.log('STOP - XXX');
                 p.position.x = x-1;
                 p.velocity.x = 0;
             }
@@ -587,7 +491,6 @@ function updatePlayers(){
             let x = Math.ceil(p.position.x + p.velocity.x * frameDelta - 1),
                 y = Math.ceil(p.position.y),// + p.velocity.y * frameDelta),
                 double = y != p.position.y;
-            console.log(`Checking: ${x}, ${y}`);
             if(map.cells[x]?.[y] || (double && map.cells[x]?.[y-1])) {
                 p.position.x = x+1;
                 p.velocity.x = 0;
@@ -598,7 +501,6 @@ function updatePlayers(){
             let x = Math.ceil(p.position.x),
                 y = Math.ceil(p.position.y + p.velocity.y * frameDelta),// + p.velocity.y * frameDelta),
                 double = x != p.position.x;
-            console.log(`Checking: ${x}, ${y}`);
             if(map.cells[x]?.[y] || (double && map.cells[x-1]?.[y])) {
                 p.position.y = y-1;
                 p.velocity.y = 0;
@@ -607,7 +509,6 @@ function updatePlayers(){
             let x = Math.ceil(p.position.x),
                 y = Math.ceil(p.position.y + p.velocity.y * frameDelta - 1),// + p.velocity.y * frameDelta),
                 double = x != p.position.x;
-            console.log(`Checking: ${x}, ${y}`);
             if(map.cells[x]?.[y] || (double && map.cells[x-1]?.[y])) {
                 p.position.y = y+1;
                 p.velocity.y = 0;
@@ -618,7 +519,6 @@ function updatePlayers(){
         p.position.y += p.velocity.y*frameDelta;
         p.velocity.y -= p.isGrounded ? 0 : p.isJumping ? 25*frameDelta : 40*frameDelta;
         if(p.position.y <= 0){
-            //console.log('ON THE FRICKING GROUND');
             p.position.y = 0;
             p.velocity.y = 0;
             p.isGrounded = true;
@@ -925,28 +825,6 @@ function drawAnimations(){
 
 //draw debugging stuff such as middle cross
 function drawDebug(){
-    if(debuging.showHitboxFlows){
-        ctx.strokeStyle = 'red';
-        //ctx.lineWidth = 15;
-        ctx.beginPath();
-        hitboxes.downFlow.forEach(dF => {
-            ctx.moveTo(relTC.x(dF.x),relTC.y(dF.y));
-            ctx.lineTo(relTC.x(dF.x+dF.w),relTC.y(dF.y));
-        });
-        hitboxes.upFlow.forEach(dF => {
-            ctx.moveTo(relTC.x(dF.x),relTC.y(dF.y));
-            ctx.lineTo(relTC.x(dF.x+dF.w),relTC.y(dF.y));
-        });
-        hitboxes.rightFlow.forEach(dF => {
-            ctx.moveTo(relTC.x(dF.x),relTC.y(dF.y));
-            ctx.lineTo(relTC.x(dF.x),relTC.y(dF.y+dF.w));
-        });
-        hitboxes.leftFlow.forEach(dF => {
-            ctx.moveTo(relTC.x(dF.x),relTC.y(dF.y));
-            ctx.lineTo(relTC.x(dF.x),relTC.y(dF.y+dF.w));
-        });
-        ctx.stroke();
-    }
     if(debuging.showScreenSplit){
         ctx.strokeStyle = 'rgba(70,140,140,0.5)';
         //ctx.lineWidth = 1;
@@ -1040,7 +918,7 @@ function createCharacter(type, values){
     switch(type){
         case 'player':{
             let player = {
-                position: values?.position ?? {x:0,y:0},
+                position: values?.position ?? {x:1,y:1},
                 velocity: values?.velocity ?? {x:0,y:0},
                 forces: values?.forces ?? {x:0,y:1},
                 health: values?.health ?? 100,
@@ -1077,10 +955,16 @@ function createCharacter(type, values){
 function startGame(){
     console.log('Starting...');
     document.querySelector('#start-menu').style.display = 'none';
-    document.querySelector('#menu').style.display = 'inline';
-    let name = document.querySelector('#input-nickname').value;
-    let idx = createCharacter('player',{name:name,id:data.id});
-    player.data = characters.players[idx];
+    document.querySelector('#side-menu').style.display = 'inline';
+    document.querySelector('#side-menu .level-editor-menu').classList.add('hidden');
+    document.querySelector('#side-menu .ingame-menu').classList.remove('hidden');
+    document.querySelectorAll('#side-menu .ingame-menu .editor-bound').forEach(e => {e.classList.add('hidden');});
+    document.querySelector('#debug-menu').style.display = 'inline';
+    if(player.data.id === undefined){
+        let name = document.querySelector('#input-nickname').value;
+        let idx = createCharacter('player',{name:name,id:data.id});
+        player.data = characters.players[idx];
+    }
     resizeGameDisplay();
     innitialise_game_events();
     gameIsRunning=true;
@@ -1091,13 +975,44 @@ function startGame(){
 
 // -- UI functions --
 
+function setup(){
+    //called once on page load
+
+    has_local_storage = typeof Storage !== undefined;
+    if(has_local_storage) {
+        is_dev = !!localStorage.getItem('is_dev');
+    }
+    if(is_dev){
+        document.querySelector('#debug-menu').classList.remove('hidden');
+        document.querySelector('#show-debug-menu').classList.remove('hidden');
+    } else {
+        debuging.showScreenSplit = false;
+    }
+
+    //establish peer connection
+    open_peer();
+}
+
 function fadeMenu(fade, step){
     if(fade){
-        document.querySelector('#menu').style.transform = 'scale(0)';
-        document.querySelector('#show-menu').style.opacity = 1;
+        document.querySelector('#debug-menu').style.transform = 'scale(0)';
+        document.querySelector('#show-debug-menu').style.opacity = 1;
     } else {
-        document.querySelector('#menu').style.transform = 'scale(1)';
-        document.querySelector('#show-menu').style.opacity = 0;
+        document.querySelector('#debug-menu').style.transform = 'scale(1)';
+        document.querySelector('#show-debug-menu').style.opacity = 0;
+    }
+    focus_canvas();
+}
+
+function toggle_side_menu(){
+    let menu = document.querySelector('#side-menu'),
+        toggle = menu.querySelector('.close');
+    if(menu.classList.contains('closed')){
+        menu.classList.remove('closed');
+        toggle.classList.remove('closed');
+    } else {
+        menu.classList.add('closed');
+        toggle.classList.add('closed');
     }
     focus_canvas();
 }
@@ -1151,8 +1066,8 @@ function update_editor_camera_position(){
         ay = player.data.realAimPosition[1],
         rx = camera.position.x + (ax - cw / 2) / w,
         ry = camera.position.y + (ay - ch / 2) / w;
-    rx = rx < 0 ? 0 : rx >= map.width ? map.width-1 : rx;
-    ry = ry < 0 ? 0 : ry >= map.height ? map.height-1 : ry;
+    rx = rx < 0 ? 0 : rx >= (map.width-1) ? map.width-1 : rx;
+    ry = ry < 0 ? 0 : ry >= (map.height-1) ? map.height-1 : ry;
     if([rx, ry] != editor_selected_position){
         editor_selected_position = [rx, ry];
         editor_update_selected_grids();
@@ -1244,7 +1159,7 @@ function editor_modify_cells(){
             break;
         }
     }
-    console.log(`Lower Bound: ${min[0]}, ${min[1]} - Upper Bound: ${max[0]}, ${max[1]}`)
+    //console.log(`Lower Bound: ${min[0]}, ${min[1]} - Upper Bound: ${max[0]}, ${max[1]}`)
     update_tile_map_area(min, max);
 }
 
@@ -1268,7 +1183,6 @@ function update_tile_map_area(lower_bound, upper_bound) {
 function update_tile_map_tile(x,y) {
     for(let xc = 0; xc < 2; xc++){
         for(let yc = 0; yc < 2; yc++){
-            console.log(xc);
             let value = 0,
                 factor = 1;
             for(let yt = 0; yt > -2; yt--){
@@ -1285,6 +1199,7 @@ function update_tile_map_tile(x,y) {
 function editor_change_grid(grid_value){
     grid_dash_pattern = !!(grid_value%2);
     grid_dash_length = grid_value**.5;
+    focus_canvas();
 }
 
 function editor_update_level_size(target_side, new_size_text){
@@ -1300,18 +1215,6 @@ function editor_update_level_size(target_side, new_size_text){
             map.height = new_size;
             break;
         }
-    }
-}
-
-function editor_toggle_menu(){
-    let menu = document.querySelector('#level-editor-menu'),
-        toggle = menu.querySelector('.close');
-    if(menu.classList.contains('closed')){
-        menu.classList.remove('closed');
-        toggle.classList.remove('closed');
-    } else {
-        menu.classList.add('closed');
-        toggle.classList.add('closed');
     }
     focus_canvas();
 }
@@ -1335,6 +1238,7 @@ function editor_update_brush(update_type, new_value){
             break;
         }
     }
+    focus_canvas();
 }
 
 function editor_update_selected_grids(){
@@ -1389,7 +1293,12 @@ function create_level_file(){
 
 function editor_save_level(){
     //save level locally
-    localStorage.setItem('editor_saved_level', create_level_file());
+    if(has_local_storage){
+        localStorage.setItem('editor_saved_level', create_level_file());
+    } else {
+        alert(`Your browser does not support local storage.\nIf you wish to save your level data, download it instead.`);
+    }
+    focus_canvas();
 }
 
 function build_level_from_string(level_string){
@@ -1406,11 +1315,13 @@ function build_level_from_string(level_string){
             for(let x=0; x<w; x++){
                 let row = [];
                 for(let y=0; y<h; y++){
-                    row.push(Number(cell_data[x*h+y]));
+                    row.push(Number(cell_data[(x)*h+y]));
                 }
                 map.cells.push(row);
             }
             create_tile_map_by_cells();
+            document.querySelector('#level-editor-input-level-width').value = w;
+            document.querySelector('#level-editor-input-level-height').value = h;
             break;
         }
         default:{
@@ -1422,8 +1333,13 @@ function build_level_from_string(level_string){
 
 function editor_load_level(){
     //load locally saved level
-    let saved_level_data = localStorage.getItem('editor_saved_level');
-    build_level_from_string(saved_level_data);
+    if(has_local_storage){
+        let saved_level_data = localStorage.getItem('editor_saved_level');
+        build_level_from_string(saved_level_data);
+    } else {
+        alert(`Cannot load level: Your browser does not support local storage.`);
+    }
+    focus_canvas();
 }
 
 function editor_export_level(){
@@ -1440,6 +1356,7 @@ function editor_export_level(){
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+    focus_canvas();
 }
 
 function editor_import_level(input){
@@ -1459,14 +1376,18 @@ function editor_import_level(input){
         alert("Error: failed loading level file");
         return;
     };
+    
+    focus_canvas();
 }
 
 function editor_test_level(){
     console.log('Testing level setup...');
-    document.querySelector('#level-editor-menu').style.display = 'none';
-    document.querySelector('#menu').style.display = 'inline';
+    document.querySelector('#chat').classList.remove('hidden');
+    document.querySelector('#side-menu .level-editor-menu').classList.add('hidden');
+    document.querySelector('#side-menu .ingame-menu').classList.remove('hidden');
+    document.querySelectorAll('#side-menu .ingame-menu .editor-bound').forEach(e => {e.classList.remove('hidden');});
     document.querySelector('#menu-return-to-editor').classList.remove('hidden');
-    if(!player.data.id){
+    if(player.data.id === undefined){
         let name = document.querySelector('#input-nickname').value;
         let idx = createCharacter('player',{name:name,id:data.id});
         player.data = characters.players[idx];
@@ -1481,8 +1402,10 @@ function editor_test_level(){
 
 function enter_editor_mode(){
     console.log('Returning to editor...');
-    document.querySelector('#level-editor-menu').style.display = 'inline';
-    document.querySelector('#menu').style.display = 'none';
+    document.querySelector('#chat').classList.add('hidden');
+    document.querySelector('#side-menu .level-editor-menu').classList.remove('hidden');
+    document.querySelector('#side-menu .ingame-menu').classList.add('hidden');
+    document.querySelectorAll('#side-menu .ingame-menu .editor-bound').forEach(e => {e.classList.remove('hidden');});
     innitialise_editor_events();
     innitialise_game_events(false);
     level_editor_is_running = true;
@@ -1494,8 +1417,9 @@ function enter_editor_mode(){
 function start_level_editor(){
     console.log('Starting Level Editor');
     document.querySelector('#start-menu').style.display = 'none';
-    document.querySelector('#chat').style.display = 'none';
-    document.querySelector('#level-editor-menu').style.display = 'inline';
+    document.querySelector('#chat').classList.add('hidden');
+    document.querySelector('#side-menu').style.display = 'inline';
+    document.querySelector('#debug-menu').style.display = 'inline';
     document.querySelector('#level-editor-input-level-width').value = map.width;
     document.querySelector('#level-editor-input-level-height').value = map.height;
     resizeGameDisplay();
@@ -1507,8 +1431,13 @@ function start_level_editor(){
 
 function exit_level_editor(){
     console.log('Exiting Level Editor');
+    document.querySelector('#chat').classList.remove('hidden');
     document.querySelector('#start-menu').style.display = 'inline';
-    document.querySelector('#level-editor-menu').style.display = 'none';
+    document.querySelector('#side-menu').style.display = 'none';
+    document.querySelector('#menu-return-to-editor').classList.add('hidden');
     level_editor_is_running=false;
     innitialise_editor_events(false);
 }
+
+
+setup();

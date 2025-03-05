@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="index.css">
+    <link rel="icon" href="imgs/sword_icon.png">
     <title>Platformer: Client - Prototype</title>
 </head>
 <body>
     <button id="game-canvas-event-listener">
         <canvas id="game-canvas">This is the game canvas.</canvas>
     </button>
-    <div id="show-menu" class="semi-button" onclick="fadeMenu(0);">=</div>
-    <div id="menu">
+    <div id="show-debug-menu" class="semi-button hidden" onclick="fadeMenu(0);">=</div>
+    <div id="debug-menu" class="hidden">
         <div id="menu-lerp-container">
             Lerp: &nbsp;&nbsp;<input type="number" min="0" max="1" step=".01" value="0.5" id="input-lerp" onchange="updateLerp(this.value**9);"><span class="close semi-button" onclick="fadeMenu(1);">X</span></br>
             <input type="range" min="0" max="1" step=".01" value=".5" id="slide-lerp" oninput="updateLerp(this.value**9);"></br>
@@ -22,7 +23,6 @@
             Framerate: <input type="number" min="1" value="60" oninput="AGM.framerate=this.value" id="input-arificial-framerate">
         </div>
         <div id="menu-show-hitboxes-container">
-            Show hitbox-flow: <input type="checkbox" onchange="debuging.showHitboxFlows=this.checked"></br>
             Show screen segments: <input type="checkbox" onchange="debuging.showScreenSplit=this.checked" checked></br>
             Show input control: <input type="checkbox" onchange="debuging.showInputControl=this.checked"></br>
             Show aim offset: <input type="checkbox" onchange="debuging.showAimOffset=this.checked"></br>
@@ -46,35 +46,45 @@
             <button onclick="startGame();" class="small">Test offline</button>
         </div>
     </div>
-    <div id="level-editor-menu" class="">
-        <div class="close" onclick="editor_toggle_menu()">
+    <div id="side-menu" class="">
+        <div class="close" onclick="toggle_side_menu()">
             <span><</span>
             <span><</span>
         </div>
         <div class="content">
-            <div class="titel head">Editor Menu</div>
-            <div class="separator"></div>
-            <div class="titel">Visuals</div>
-            <div class="option"><span>Grid Varient:</span><input type="number" value="1" step="1" min="0" oninput="editor_change_grid(this.value)"></div>
-            <div class="separator"></div>
-            <div class="titel">Level Properties</div>
-            <div class="option"><span>Width</span><input type="number" id="level-editor-input-level-width" value="1" step="1" min="1" oninput="editor_update_level_size(0, this.value)">
-                <span>Height</span><input type="number" id="level-editor-input-level-height" value="1" step="1" min="1" oninput="editor_update_level_size(1, this.value)"></div>
-            <div class="separator"></div>
-            <div class="titel">Tools</div>
-            <div class="option"><span>Brush Size:</span><input id="editor-menu-input-brush-size" type="range" value="1" step="0.5" min="1" max="9" oninput="editor_update_brush(0, Number(this.value))"><span id="editor-menu-brush-size" class="range-value">1.0</span></div>
-            <div class="option"><span>Brush Shape:</span><select oninput="editor_update_brush(1, Number(this.value))"><option value="0">Square</option><option value="1">Circle</option></select></div>
-            <div class="option"><span>Brush Type:</span><select oninput="editor_update_brush(2, Number(this.value))"><option value="0">Fill</option><option value="1">Invert</option><option value="2">Remove</option></select></div>
-            <div class="separator"></div>
-            <div class="titel">Level Data</div>
-            <button onclick="editor_save_level();">Save</button>
-            <button onclick="editor_load_level();">Load</button>
-            <button onclick="editor_export_level();">Export</button>
-            <button onclick="document.querySelector('#editor-import-file').click();">Import</button>
-            <input type="file" id="editor-import-file" accept=".txt" onchange="editor_import_level(this)" class="hidden">
-            <div class="separator"></div>
-            <button onclick="editor_test_level();">Test Level</button>
-            <button onclick="exit_level_editor();">Exit Editor</button>
+            <div class="level-editor-menu">
+                <div class="titel head">Editor Menu</div>
+                <div class="separator"></div>
+                <div class="titel">Visuals</div>
+                <div class="option"><span>Grid Varient:</span><input type="number" value="1" step="1" min="0" oninput="editor_change_grid(this.value)"></div>
+                <div class="separator"></div>
+                <div class="titel">Level Properties</div>
+                <div class="option"><span>Width</span><input type="number" id="level-editor-input-level-width" value="1" step="1" min="1" onchange="editor_update_level_size(0, this.value)">
+                    <span>Height</span><input type="number" id="level-editor-input-level-height" value="1" step="1" min="1" onchange="editor_update_level_size(1, this.value)"></div>
+                <div class="separator"></div>
+                <div class="titel">Tools</div>
+                <div class="option"><span>Brush Size:</span><input id="editor-menu-input-brush-size" type="range" value="1" step="0.5" min="1" max="9" oninput="editor_update_brush(0, Number(this.value))"><span id="editor-menu-brush-size" class="range-value">1.0</span></div>
+                <div class="option"><span>Brush Shape:</span><select oninput="editor_update_brush(1, Number(this.value))"><option value="0">Square</option><option value="1">Circle</option></select></div>
+                <div class="option"><span>Brush Type:</span><select oninput="editor_update_brush(2, Number(this.value))"><option value="0">Fill</option><option value="1">Invert</option><option value="2">Remove</option></select></div>
+                <div class="separator"></div>
+                <div class="titel">Level Data</div>
+                <div class="button" onclick="editor_save_level();">Save</div>
+                <div class="button" onclick="editor_load_level();">Load</div>
+                <div class="button" onclick="editor_export_level();">Export</div>
+                <div class="button" onclick="document.querySelector('#editor-import-file').click();">Import</div>
+                <input type="file" id="editor-import-file" accept=".txt" onchange="editor_import_level(this)" class="hidden">
+                <div class="separator"></div>
+                <div class="button" onclick="editor_test_level();">Test Level</div>
+                <div class="button" onclick="exit_level_editor();">Exit Editor</div>
+            </div>
+            <div class="ingame-menu hidden">
+                <div class="titel head">Options</div>
+                <div class="separator"></div>
+                <div class="titel">Camera</div>
+                <div class="option"><span>Speed:</span><input type="range" min="0" max="1" step=".01" value=".5" oninput="updateLerp((1-this.value)**9);focus_canvas();"></div>
+                <div class="separator editor-bound hidden"></div>
+                <div class="button editor-bound hidden" onclick="enter_editor_mode();">< Return to editor</div>
+            </div>
         </div>
     </div>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>

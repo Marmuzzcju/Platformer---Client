@@ -132,7 +132,7 @@ function handle_game_canvas_input(e){
             break;
         }
         case 'click':{  
-            console.log(e);
+            //console.log(e);
             switch(e.button){
                 case 0:{
                     //attack
